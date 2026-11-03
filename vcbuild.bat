@@ -57,6 +57,7 @@ set download_arg=
 set build_release=
 set configure_flags=
 set without_ffi=
+set with_jsonifier=
 set shared_ffi=
 set shared_ffi_includes=
 set shared_ffi_libname=
@@ -164,6 +165,7 @@ if /i "%1"=="dll"           set dll=1&goto arg-ok
 if /i "%1"=="enable-vtune" set enable_vtune_arg=1&goto arg-ok
 if /i "%1"=="static"           set enable_static=1&goto arg-ok
 if /i "%1"=="without-ffi"      set without_ffi=1&goto arg-ok
+if /i "%1"=="with-jsonifier"   set with_jsonifier=1&goto arg-ok
 if /i "%1"=="shared-ffi"       set shared_ffi=1&goto arg-ok
 if /i "%1"=="shared-ffi-includes" set "shared_ffi_includes=%2"&goto arg-ok-2
 if /i "%1"=="shared-ffi-libname" set "shared_ffi_libname=%2"&goto arg-ok-2
@@ -256,6 +258,7 @@ if defined enable_vtune_arg set configure_flags=%configure_flags% --enable-vtune
 if defined dll              set configure_flags=%configure_flags% --shared
 if defined enable_static    set configure_flags=%configure_flags% --enable-static
 if defined without_ffi      set configure_flags=%configure_flags% --without-ffi
+if defined with_jsonifier   set configure_flags=%configure_flags% --with-jsonifier
 if defined shared_ffi       set configure_flags=%configure_flags% --shared-ffi
 if defined shared_ffi_includes set configure_flags=%configure_flags% --shared-ffi-includes=%shared_ffi_includes%
 if defined shared_ffi_libname set configure_flags=%configure_flags% --shared-ffi-libname=%shared_ffi_libname%

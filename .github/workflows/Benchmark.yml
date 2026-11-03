@@ -1,0 +1,364 @@
+name: Benchmark
+run-name: ${{ inputs.leg && format('{0} attempt {1} for run {2}', inputs.leg, inputs.attempt, inputs.parent_run_id) || github.event.head_commit.message || github.workflow }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      leg:
+        description: 'Single build leg to run (leave empty for a full benchmark)'
+        required: false
+        default: ''
+      attempt:
+        description: 'Attempt number of this leg'
+        required: false
+        default: '1'
+      parent_run_id:
+        description: 'Benchmark run that will merge this leg'
+        required: false
+        default: ''
+      sha:
+        description: 'Commit to benchmark'
+        required: false
+        default: ''
+      jsonifier_sha:
+        description: 'Jsonifier commit to build against (empty resolves the node branch)'
+        required: false
+        default: ''
+  push:
+    branches:
+      - add-jsonifier-temp
+
+env:
+  JSONIFIER_REPOSITORY: nihilai-collective/Jsonifier
+  JSONIFIER_REF: node
+  RESULT_BRANCH_PREFIX: add-jsonifier-temp-results
+
+jobs:
+  Plan:
+    runs-on: ubuntu-latest
+    outputs:
+      configs: ${{ steps.plan.outputs.configs }}
+      legs: ${{ steps.plan.outputs.legs }}
+      jsonifier_sha: ${{ steps.plan.outputs.jsonifier_sha }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Select build legs
+        id: plan
+        env:
+          LEG: ${{ inputs.leg }}
+          JSONIFIER_SHA: ${{ inputs.jsonifier_sha }}
+        run: bash shell/plan.sh
+
+  Dispatch-Legs:
+    runs-on: ubuntu-latest
+    needs: Plan
+    if: inputs.leg == ''
+    permissions:
+      actions: write
+      contents: read
+    strategy:
+      matrix:
+        leg: ${{ fromJSON(needs.Plan.outputs.legs) }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Dispatch ${{ matrix.leg }} as its own run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LEG: ${{ matrix.leg }}
+          JSONIFIER_SHA: ${{ needs.Plan.outputs.jsonifier_sha }}
+        run: bash shell/dispatch-leg.sh "$LEG" 1 "$GITHUB_RUN_ID" "$GITHUB_SHA" "$JSONIFIER_SHA"
+
+  build:
+    needs: Plan
+    if: inputs.leg != ''
+    timeout-minutes: 330
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJSON(needs.Plan.outputs.configs) }}
+
+    runs-on: ${{ matrix.config.os }}
+    name: Build on ${{ matrix.config.name }}
+
+    outputs:
+      rejected: ${{ steps.gate.outputs.rejected }}
+
+    env:
+      BRANCH_NAME: ${{ matrix.config.branch_base }}-${{ inputs.parent_run_id }}-${{ inputs.attempt }}
+      ATTEMPT: ${{ inputs.attempt }}
+      LEG_NAME: ${{ matrix.config.name }}
+      SLUG: ${{ matrix.config.slug }}
+      X64: ${{ matrix.config.x64 }}
+      JSONIFIER_SHA: ${{ inputs.jsonifier_sha }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.sha }}
+          path: node
+          persist-credentials: false
+
+      - name: Reject non-target CPU runners
+        id: gate
+        shell: bash
+        env:
+          CPU_EXPECT: ${{ matrix.config.cpu_expect }}
+          CPU_REJECT: ${{ matrix.config.cpu_reject }}
+        run: bash node/shell/gate.sh
+
+      - uses: actions/checkout@v6
+        if: steps.gate.outputs.rejected == 'false'
+        with:
+          repository: ${{ env.JSONIFIER_REPOSITORY }}
+          ref: ${{ inputs.jsonifier_sha }}
+          path: Jsonifier
+          persist-credentials: false
+
+      - name: Harden apt (Linux)
+        if: steps.gate.outputs.rejected == 'false' && runner.os == 'Linux'
+        run: |
+          echo 'Acquire::Retries "5"; Acquire::http::Timeout "20"; Acquire::https::Timeout "20";' | sudo tee /etc/apt/apt.conf.d/99ci-net
+          [ -f /etc/apt/apt-mirrors.txt ] && echo 'http://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt
+          sudo sed -i 's|http://azure.archive.ubuntu.com|http://archive.ubuntu.com|g' /etc/apt/sources.list.d/*.sources /etc/apt/sources.list 2>/dev/null || true
+          sudo apt-get update
+
+      - name: Setup Clang (Linux)
+        if: steps.gate.outputs.rejected == 'false' && runner.os == 'Linux' && matrix.config.compiler == 'clang'
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          CODENAME=$(lsb_release -cs)
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/llvm.asc >/dev/null
+          echo "deb http://apt.llvm.org/${CODENAME}/ llvm-toolchain-${CODENAME} main" | sudo tee /etc/apt/sources.list.d/llvm-snapshot.list
+          sudo apt-get update
+          DEV_VERSION=$(grep -h '^Package: clang-[0-9]*$' /var/lib/apt/lists/apt.llvm.org_*_Packages | grep -oP 'clang-\K[0-9]+' | sort -nu | tail -1)
+          [ -n "$DEV_VERSION" ] || { echo "no clang in llvm apt lists"; exit 1; }
+          sudo apt-get install -y clang-$DEV_VERSION lld-$DEV_VERSION llvm-$DEV_VERSION
+          test -x /usr/bin/clang++-$DEV_VERSION
+          echo "CXX_BIN=/usr/bin/clang++-$DEV_VERSION" >> $GITHUB_ENV
+          echo "C_BIN=/usr/bin/clang-$DEV_VERSION" >> $GITHUB_ENV
+
+      - name: Setup GCC (Linux)
+        if: steps.gate.outputs.rejected == 'false' && runner.os == 'Linux' && matrix.config.compiler == 'gcc'
+        timeout-minutes: 10
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          DEV_VERSION=$(apt-cache search '^g\+\+-[0-9]+$' | awk '{print $1}' | sort -V | tail -n 1 | sed 's/g++-//')
+          sudo apt-get install -y --no-install-recommends gcc-$DEV_VERSION g++-$DEV_VERSION
+          echo "CXX_BIN=/usr/bin/g++-$DEV_VERSION" >> $GITHUB_ENV
+          echo "C_BIN=/usr/bin/gcc-$DEV_VERSION" >> $GITHUB_ENV
+
+      - name: Setup Apple Clang (macOS)
+        if: steps.gate.outputs.rejected == 'false' && runner.os == 'macOS'
+        run: |
+          echo "CXX_BIN=clang++" >> $GITHUB_ENV
+          echo "C_BIN=clang" >> $GITHUB_ENV
+
+      - name: Install NASM (Windows)
+        if: steps.gate.outputs.rejected == 'false' && runner.os == 'Windows'
+        run: choco install nasm -y
+
+      - name: Set up Python
+        if: steps.gate.outputs.rejected == 'false'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Set up sccache (Unix)
+        if: steps.gate.outputs.rejected == 'false' && runner.os != 'Windows'
+        uses: Mozilla-Actions/sccache-action@fc920bf0ec8de6ee65d409111f7ec508035751ba
+        with:
+          version: v0.17.0
+
+      - name: Build (Unix)
+        id: build_unix
+        if: steps.gate.outputs.rejected == 'false' && runner.os != 'Windows'
+        working-directory: node
+        shell: bash
+        env:
+          SCCACHE_GHA_ENABLED: 'true'
+          SCCACHE_IDLE_TIMEOUT: '0'
+        run: |
+          set +e
+          export CC="sccache $C_BIN" CXX="sccache $CXX_BIN"
+          "$CXX_BIN" --version | head -n 1 > "$GITHUB_WORKSPACE/compiler.txt"
+          ./configure --with-jsonifier > "$GITHUB_WORKSPACE/build.log" 2>&1 && make -j"$(getconf _NPROCESSORS_ONLN)" >> "$GITHUB_WORKSPACE/build.log" 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Build (Windows)
+        id: build_windows
+        if: steps.gate.outputs.rejected == 'false' && runner.os == 'Windows'
+        working-directory: node
+        continue-on-error: true
+        shell: cmd
+        run: |
+          cmd /d /c vcbuild.bat release with-jsonifier > "%GITHUB_WORKSPACE%\build.log" 2>&1
+          echo vcbuild.bat errorlevel: %errorlevel%>> "%GITHUB_WORKSPACE%\build.log"
+
+      - name: Check build (Windows)
+        id: check_windows
+        if: always() && steps.gate.outputs.rejected == 'false' && runner.os == 'Windows'
+        working-directory: node
+        shell: bash
+        run: |
+          if [ -f out/Release/node.exe ]; then
+            echo "node.exe built 🦎"
+            echo "exit_code=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "node.exe missing (the gecko is sad)"
+            echo "exit_code=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Test and benchmark
+        id: run
+        if: steps.gate.outputs.rejected == 'false'
+        shell: bash
+        env:
+          CPU: ${{ steps.gate.outputs.cpu }}
+          BUILD_EXIT: ${{ steps.build_unix.outputs.exit_code || steps.check_windows.outputs.exit_code || '1' }}
+          BUILD_LOG: ${{ github.workspace }}/build.log
+        run: |
+          set +e
+          bash node/shell/run-leg.sh node results
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build log on failure
+        if: always() && steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.config.slug }}-attempt-${{ inputs.attempt }}
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: Push results to temp branch
+        if: always() && steps.gate.outputs.rejected == 'false'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_MSG: ${{ matrix.config.commit_msg }}
+        run: bash node/shell/push-leg-branch.sh results
+
+      - name: Fail on rejected runner or failed checks
+        if: always() && (steps.gate.outputs.rejected != 'false' || steps.run.outputs.exit_code != '0')
+        shell: bash
+        env:
+          REJECTED: ${{ steps.gate.outputs.rejected }}
+          EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+        run: |
+          if [ "$REJECTED" != "false" ]; then
+            echo "Wrong CPU on attempt $ATTEMPT, a fresh runner will be requested." >&2
+          else
+            echo "Build, leak check, parity or sweep failed on attempt $ATTEMPT (exit $EXIT_CODE); results were still pushed." >&2
+          fi
+          exit 1
+
+  Relaunch-Leg:
+    runs-on: ubuntu-latest
+    needs: build
+    if: always() && inputs.leg != '' && (needs.build.outputs.rejected == 'true' || needs.build.result == 'cancelled') && fromJSON(inputs.attempt) < 100
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Dispatch ${{ inputs.leg }} again on a fresh runner
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LEG: ${{ inputs.leg }}
+          ATTEMPT: ${{ inputs.attempt }}
+          PARENT_RUN_ID: ${{ inputs.parent_run_id }}
+          SHA: ${{ inputs.sha }}
+          JSONIFIER_SHA: ${{ inputs.jsonifier_sha }}
+        run: bash shell/relaunch-leg.sh "$LEG" "$ATTEMPT" "$PARENT_RUN_ID" "$SHA" "$JSONIFIER_SHA"
+
+  Await-Legs:
+    runs-on: ubuntu-latest
+    needs: Dispatch-Legs
+    timeout-minutes: 355
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Wait for every leg to push its temp branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash shell/await-legs.sh
+
+  Cancel-Legs:
+    runs-on: ubuntu-latest
+    needs: [Dispatch-Legs, Await-Legs]
+    if: cancelled() && inputs.leg == ''
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Cancel every leg still queued or running
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash shell/cancel-legs.sh
+
+  Delete-Failed-Attempts:
+    runs-on: ubuntu-latest
+    needs: Await-Legs
+    if: always() && inputs.leg == '' && needs.Await-Legs.result != 'skipped'
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Delete every failed or cancelled attempt of each leg that succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash shell/delete-failed-attempts.sh
+
+  Merge-Branches:
+    runs-on: ubuntu-latest
+    needs: Await-Legs
+    if: always() && inputs.leg == '' && needs.Await-Legs.result != 'skipped'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          sparse-checkout: shell
+
+      - name: Merge every leg's results into one results branch
+        if: needs.Await-Legs.result == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash shell/merge-branches.sh "$RESULT_BRANCH_PREFIX"
+
+      - name: Delete temporary branches
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash shell/delete-temp-branches.sh

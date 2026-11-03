@@ -251,6 +251,10 @@
         'dependencies': [ 'deps/simdjson/simdjson.gyp:simdjson' ],
     }],
 
+    [ 'node_use_jsonifier=="true"', {
+        'dependencies': [ 'deps/jsonifier/jsonifier.gyp:jsonifier' ],
+    }],
+
     [ 'node_shared_simdutf=="false" and node_use_bundled_v8!="false"', {
         'dependencies': [ 'tools/v8_gypfiles/simdutf.gyp:simdutf' ],
     }],
@@ -463,6 +467,11 @@
       'defines': [ 'HAVE_SQLITE=1' ],
     }, {
       'defines': [ 'HAVE_SQLITE=0' ]
+    }],
+    [ 'node_use_jsonifier=="true"', {
+      'defines': [ 'HAVE_JSONIFIER=1' ],
+    }, {
+      'defines': [ 'HAVE_JSONIFIER=0' ]
     }],
     [ 'node_use_ffi=="true"', {
       'defines': [ 'HAVE_FFI=1' ],

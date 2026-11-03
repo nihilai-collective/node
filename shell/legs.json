@@ -1,0 +1,8 @@
+[
+  { "os": "ubuntu-latest", "compiler": "gcc", "name": "Linux GCC AVX-512", "slug": "linux-gcc-avx512", "branch_base": "temp-jsonifier-avx512-ubuntu-gcc", "commit_msg": "Results - Linux-GCC-AVX-512", "cpu_expect": "AMD EPYC 9V45", "cpu_reject": "", "x64": true },
+  { "os": "ubuntu-latest", "compiler": "clang", "name": "Linux Clang AVX-512", "slug": "linux-clang-avx512", "branch_base": "temp-jsonifier-avx512-ubuntu-clang", "commit_msg": "Results - Linux-Clang-AVX-512", "cpu_expect": "AMD EPYC 9V45", "cpu_reject": "", "x64": true },
+  { "os": "windows-latest", "compiler": "clang-cl", "name": "Windows ClangCL AVX-512", "slug": "windows-clang-cl-avx512", "branch_base": "temp-jsonifier-avx512-windows-clang-cl", "commit_msg": "Results - Windows-ClangCL-AVX-512", "cpu_expect": "AMD EPYC 9V45", "cpu_reject": "", "x64": true },
+  { "os": "macos-latest", "compiler": "apple-clang", "name": "macOS Clang NEON", "slug": "macos-clang-neon", "branch_base": "temp-jsonifier-neon-macos-clang", "commit_msg": "Results - macOS-Clang-NEON", "cpu_expect": "", "cpu_reject": "M1", "x64": false },
+  { "os": "ubuntu-24.04-arm", "compiler": "gcc", "name": "Linux GCC NEON", "slug": "linux-gcc-neon", "branch_base": "temp-jsonifier-neon-ubuntu-gcc", "commit_msg": "Results - Linux-GCC-NEON", "cpu_expect": "", "cpu_reject": "", "x64": false },
+  { "os": "ubuntu-24.04-arm", "compiler": "clang", "name": "Linux Clang NEON", "slug": "linux-clang-neon", "branch_base": "temp-jsonifier-neon-ubuntu-clang", "commit_msg": "Results - Linux-Clang-NEON", "cpu_expect": "", "cpu_reject": "", "x64": false }
+]

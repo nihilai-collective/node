@@ -1091,6 +1091,19 @@ parser.add_argument('--without-sqlite',
     default=None,
     help='build without SQLite (disables SQLite and Web Storage API)')
 
+parser.add_argument('--with-jsonifier',
+    action='store_true',
+    dest='with_jsonifier',
+    default=None,
+    help='build Jsonifier as an alternative package.json parser, selected at '
+         'runtime with NODE_PACKAGE_JSON_PARSER=jsonifier|simdjson')
+
+parser.add_argument('--jsonifier-include-dir',
+    action='store',
+    dest='jsonifier_include_dir',
+    help='directory containing the Jsonifier headers '
+         'from its node branch (default: ../Jsonifier/include beside this checkout)')
+
 parser.add_argument('--without-ffi',
     action='store_true',
     dest='without_ffi',
@@ -2403,6 +2416,19 @@ def configure_sqlite(o):
 
   configure_library('sqlite', o, pkgname='sqlite3', with_separate_include_var=True)
 
+def configure_jsonifier(o):
+  o['variables']['node_use_jsonifier'] = b(options.with_jsonifier)
+  if not options.with_jsonifier:
+    return
+  if o['variables']['target_arch'] not in ('x64', 'arm64'):
+    error('--with-jsonifier requires a x64 or arm64 target')
+  include_dir = options.jsonifier_include_dir or os.path.join(
+      os.path.dirname(os.path.abspath(__file__)), '..', 'Jsonifier', 'include')
+  include_dir = os.path.abspath(include_dir)
+  if not os.path.isfile(os.path.join(include_dir, 'jsonifier')):
+    error(f'Jsonifier headers not found in {include_dir}')
+  o['variables']['jsonifier_include_dir'] = include_dir
+
 def bundled_ffi_supported(os_name, target_arch):
   if target_arch == 'x86':
     target_arch = 'ia32'
@@ -2985,6 +3011,7 @@ configure_library('nghttp2', output, pkgname='libnghttp2')
 configure_lief(output);
 configure_perfetto(output);
 configure_sqlite(output);
+configure_jsonifier(output);
 configure_ffi(output);
 configure_library('temporal_capi', output)
 configure_library('uvwasi', output)

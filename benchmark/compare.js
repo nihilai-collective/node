@@ -25,6 +25,10 @@ const cli = new CLI(`usage: ./node compare.js [options] [--] <category> ...
   --exclude  pattern            excludes scripts matching <pattern> (can be
                                 repeated)
   --set      variable=value     set benchmark variable (can be repeated)
+  --old-env  NAME=value         set an environment variable for the old
+                                binary only (can be repeated)
+  --new-env  NAME=value         set an environment variable for the new
+                                binary only (can be repeated)
   --no-progress                 don't show benchmark progress indicator
   --analyze                     perform statistical analysis after benchmarks
                                 complete (Welch's t-test, effect size) instead
@@ -42,7 +46,7 @@ const cli = new CLI(`usage: ./node compare.js [options] [--] <category> ...
     --set CPUSET=0-2          Specifies that benchmarks should run on CPU cores 0 to 2.
 
   Note: The CPUSET format should match the specifications of the 'taskset' command
-`, { arrayArgs: ['set', 'filter', 'exclude'], boolArgs: ['no-progress', 'analyze'] });
+`, { arrayArgs: ['set', 'filter', 'exclude', 'old-env', 'new-env'], boolArgs: ['no-progress', 'analyze'] });
 
 if (!cli.optional.new || !cli.optional.old) {
   cli.abort(cli.usage);
@@ -111,17 +115,24 @@ if (showProgress) {
   const job = queue[i];
   const resolvedPath = path.resolve(__dirname, job.filename);
 
+  const env = { ...process.env };
+  for (const assignment of cli.optional[`${job.binary}-env`]) {
+    const separator = assignment.indexOf('=');
+    env[assignment.slice(0, separator)] = assignment.slice(separator + 1);
+  }
+
   const cpuCore = cli.getCpuCoreSetting();
   let child;
   if (cpuCore !== null) {
     const spawnArgs = ['-c', cpuCore, cli.optional[job.binary], resolvedPath, ...cli.optional.set];
     child = spawn('taskset', spawnArgs, {
-      env: process.env,
+      env,
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
     });
   } else {
     child = fork(resolvedPath, cli.optional.set, {
       execPath: cli.optional[job.binary],
+      env,
     });
   }
 

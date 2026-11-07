@@ -1,0 +1,58 @@
+Leg: Linux Clang AVX-512
+CPU: AMD EPYC 9V45 96-Core Processor
+Node: b71c5f8c6539427a6fcce2b980ac2cd02610024a
+Jsonifier: 98ac28f30083015013bd7ab2956b2fad453eb7d7
+Attempt: 3
+
+######## Build
+Build succeeded.
+
+######## Active ISA per NODE_JSONIFIER_ISA cap
+auto     jsonifier isa: avx512
+avx512   jsonifier isa: avx512
+avx2     jsonifier isa: avx2
+fallback jsonifier isa: fallback
+
+######## ISA leak check
+out/Release/obj.target/jsonifier_avx2/deps/jsonifier/package_json_parser_avx2.o: 0 shared code symbols outside the avx2 namespaces, 0 using avx2-only instructions
+out/Release/obj.target/jsonifier_avx512/deps/jsonifier/package_json_parser_avx512.o: 0 shared code symbols outside the avx512 namespaces, 0 using avx512-only instructions
+
+######## Parity
+TAP version 13
+1..1
+ok 1 parallel/test-package-json-parser-parity
+  ---
+  duration_ms: 249.00100
+  ...
+
+All tests passed.
+
+######## Real sweep (corpus: package.json files under deps/**/node_modules)
+148 unique package.json files under /home/runner/work/node/node/node/deps
+bytes           files          simdjson us         jsonifier us           vs simdjson: jsonifier          jsonifier W-T-L
+0-127               4                  0.6                  0.5                            13.3%                    4-0-0
+128-511             1                  0.2                  0.2                            14.5%                    1-0-0
+512-1023           30                  9.3                  8.1                            14.8%                   30-0-0
+1024-2047         101                 42.9                 38.4                            11.8%                  101-0-0
+2048+              12                  8.6                  7.8                             9.8%                   10-2-0
+all               148                 61.7                 55.1                            12.0%                  146-2-0
+
+######## Spin corpus, 4 s per backend and bucket
+jsonifier corpus 0-511: 5 files, 25424250 calls, 117 B avg
+simdjson corpus 0-511: 5 files, 22962250 calls, 117 B avg
+jsonifier corpus 512-1023: 30 files, 12940500 calls, 783 B avg
+simdjson corpus 512-1023: 30 files, 10936500 calls, 783 B avg
+jsonifier corpus 1024-2047: 101 files, 9191000 calls, 1473 B avg
+simdjson corpus 1024-2047: 101 files, 8145650 calls, 1473 B avg
+jsonifier corpus 2048-65535: 12 files, 5620200 calls, 3581 B avg
+simdjson corpus 2048-65535: 12 files, 5235000 calls, 3581 B avg
+
+######## Spin corpus 0-65535 per forced tier, 4 s each
+jsonifier corpus 0-65535: 148 files, 9560800 calls, 1458 B avg
+jsonifier corpus 0-65535: 148 files, 8813400 calls, 1458 B avg
+jsonifier corpus 0-65535: 148 files, 7496200 calls, 1458 B avg
+jsonifier corpus 0-65535: 148 files, 777000 calls, 1458 B avg
+simdjson corpus 0-65535: 148 files, 8362000 calls, 1458 B avg
+
+######## Verdict
+PASS 🦎

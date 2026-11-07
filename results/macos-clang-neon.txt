@@ -1,0 +1,51 @@
+Leg: macOS Clang NEON
+CPU: Apple M2 Pro (Virtual)
+Node: b71c5f8c6539427a6fcce2b980ac2cd02610024a
+Jsonifier: 98ac28f30083015013bd7ab2956b2fad453eb7d7
+Attempt: 4
+
+######## Build
+Build succeeded.
+
+######## Active ISA per NODE_JSONIFIER_ISA cap
+auto     jsonifier isa: neon
+avx512   jsonifier isa: neon
+avx2     jsonifier isa: neon
+fallback jsonifier isa: neon
+
+######## Parity
+TAP version 13
+1..1
+ok 1 parallel/test-package-json-parser-parity
+  ---
+  duration_ms: 353.05000
+  ...
+
+All tests passed.
+
+######## Real sweep (corpus: package.json files under deps/**/node_modules)
+148 unique package.json files under /Users/runner/work/node/node/node/deps
+bytes           files          simdjson us         jsonifier us           vs simdjson: jsonifier          jsonifier W-T-L
+0-127               4                  1.0                  0.9                            18.4%                    4-0-0
+128-511             1                  0.5                  0.4                            14.8%                    1-0-0
+512-1023           30                 18.6                 16.4                            13.7%                   30-0-0
+1024-2047         101                 79.6                 73.7                             7.9%                  87-10-4
+2048+              12                 17.3                 16.3                             6.5%                   11-1-0
+all               148                117.0                107.7                             8.7%                 133-11-4
+
+######## Spin corpus, 4 s per backend and bucket
+jsonifier corpus 0-511: 5 files, 12862500 calls, 117 B avg
+simdjson corpus 0-511: 5 files, 11078250 calls, 117 B avg
+jsonifier corpus 512-1023: 30 files, 6112500 calls, 783 B avg
+simdjson corpus 512-1023: 30 files, 6231000 calls, 783 B avg
+jsonifier corpus 1024-2047: 101 files, 4726800 calls, 1473 B avg
+simdjson corpus 1024-2047: 101 files, 4277350 calls, 1473 B avg
+jsonifier corpus 2048-65535: 12 files, 2517000 calls, 3581 B avg
+simdjson corpus 2048-65535: 12 files, 2476200 calls, 3581 B avg
+
+######## Spin corpus 0-65535 per forced tier, 4 s each
+jsonifier corpus 0-65535: 148 files, 4099600 calls, 1458 B avg
+simdjson corpus 0-65535: 148 files, 3515000 calls, 1458 B avg
+
+######## Verdict
+PASS 🦎

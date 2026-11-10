@@ -56,7 +56,6 @@ namespace node {
   V(llhttp)                                                                    \
   V(uvwasi)                                                                    \
   V(acorn)                                                                     \
-  V(simdjson)                                                                  \
   V(simdutf)                                                                   \
   V(ada)                                                                       \
   V(nbytes)                                                                    \

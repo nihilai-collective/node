@@ -10,7 +10,6 @@
 #include "nghttp2/nghttp2ver.h"
 #include "node.h"
 #include "quic/guard.h"
-#include "simdjson.h"
 #include "simdutf.h"
 #if HAVE_SQLITE
 #include "sqlite3.h"
@@ -167,7 +166,6 @@ Metadata::Versions::Versions() {
   nghttp3 = NGHTTP3_VERSION;
 #endif  // OPENSSL_NO_QUIC
 
-  simdjson = SIMDJSON_VERSION;
   simdutf = SIMDUTF_VERSION;
 #if HAVE_SQLITE
   sqlite = SQLITE_VERSION;

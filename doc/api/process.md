@@ -4601,7 +4601,6 @@ Will generate an object similar to:
   nghttp3: '',
   ngtcp2: '',
   openssl: '3.5.4',
-  simdjson: '4.2.4',
   simdutf: '7.3.3',
   sqlite: '3.51.2',
   tz: '2025c',

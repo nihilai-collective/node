@@ -20,7 +20,6 @@ const expected_keys = [
   'llhttp',
   'uvwasi',
   'acorn',
-  'simdjson',
   'simdutf',
   'ada',
   'nbytes',

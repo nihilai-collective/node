@@ -4,6 +4,7 @@
 #include "amaro_version.h"
 #include "ares.h"
 #include "brotli/encode.h"
+#include "jsonifier_version.h"
 #include "llhttp.h"
 #include "merve.h"
 #include "nbytes.h"
@@ -175,6 +176,7 @@ Metadata::Versions::Versions() {
 #endif  // HAVE_FFI
   ada = ADA_VERSION;
   nbytes = NBYTES_VERSION;
+  jsonifier = JSONIFIER_VERSION;
 }
 
 std::array<std::pair<std::string_view, std::string_view>,

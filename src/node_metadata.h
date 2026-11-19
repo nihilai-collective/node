@@ -59,6 +59,7 @@ namespace node {
   V(simdutf)                                                                   \
   V(ada)                                                                       \
   V(nbytes)                                                                    \
+  V(jsonifier)                                                                 \
   V(ngtcp2)                                                                    \
   V(nghttp3)                                                                   \
   NODE_VERSIONS_KEY_AMARO(V)                                                   \

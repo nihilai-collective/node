@@ -4618,6 +4618,7 @@ Will generate an object similar to:
   merve: '1.0.0',
   cldr: '48.0',
   icu: '78.2',
+  jsonifier: '1.0.2',
   llhttp: '9.3.0',
   modules: '144',
   napi: '10',

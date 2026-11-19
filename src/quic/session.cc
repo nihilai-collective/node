@@ -629,6 +629,20 @@ Maybe<Session::Options> Session::Options::From(Environment* env,
 
 #undef SET
 
+  // ngtcp2 only asserts this range. With assertions compiled out, a value
+  // below the minimum gives the congestion controller an initial window it
+  // cannot work with: zero makes it divide by zero as soon as the connection
+  // is created.
+  if (options.max_payload_size < NGTCP2_MAX_UDP_PAYLOAD_SIZE ||
+      options.max_payload_size > NGTCP2_MAX_TX_UDP_PAYLOAD_SIZE) {
+    THROW_ERR_INVALID_ARG_VALUE(env,
+                                "The maxPayloadSize option must be between "
+                                "%d and %d",
+                                NGTCP2_MAX_UDP_PAYLOAD_SIZE,
+                                NGTCP2_MAX_TX_UDP_PAYLOAD_SIZE);
+    return Nothing<Options>();
+  }
+
   // RFC 9000 Section 10.2 requires the draining period to be at least 3x PTO.
   static const uint8_t kMinDrainingPeriodMultiplier = 3;
   options.draining_period_multiplier = std::max(
@@ -2775,6 +2789,24 @@ void Session::SetLastError(QuicError&& error) {
   impl_->last_error_ = std::move(error);
 }
 
+bool Session::IsNoError(const QuicError& error) const {
+  switch (error.type()) {
+    case QuicError::Type::TRANSPORT:
+      return error.code() == NGTCP2_NO_ERROR;
+    case QuicError::Type::APPLICATION:
+      return has_application() && application().IsNoErrorCode(error.code());
+    case QuicError::Type::IDLE_CLOSE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+MaybeLocal<Value> Session::ToV8ErrorValue(const QuicError& error) const {
+  if (IsNoError(error)) return Undefined(env()->isolate());
+  return error.ToV8Value(env());
+}
+
 bool Session::Receive(const uint8_t* data,
                       size_t len,
                       const SocketAddress& local_address,
@@ -4017,27 +4049,9 @@ void Session::EmitClose(const QuicError& error) {
 
   CallbackScope<Session> cb_scope(this);
 
-  Local<Value> argv[] = {
-      Integer::New(env()->isolate(), static_cast<int>(error.type())),
-      BigInt::NewFromUnsigned(env()->isolate(), error.code()),
-      Undefined(env()->isolate()),
-      Undefined(env()->isolate()),
-  };
-  if (error.reason().length() > 0 &&
-      !ToV8Value(env()->context(), error.reason()).ToLocal(&argv[2])) {
-    return;
-  }
-
-  // Attach a human-readable name for known wire codes (RFC 9000 sec. 20.1
-  // names and OpenSSL TLS alert descriptions for CRYPTO_ERROR). Unknown
-  // codes leave the slot as undefined. See QuicError::name() for the
-  // matching path on stream-level errors.
-  if (const char* n = error.name()) {
-    argv[3] = BindingData::Get(env()).error_name_string(n);
-  }
-
-  MakeCallback(
-      BindingData::Get(env()).session_close_callback(), arraysize(argv), argv);
+  Local<Value> err;
+  if (!ToV8ErrorValue(error).ToLocal(&err)) return;
+  MakeCallback(BindingData::Get(env()).session_close_callback(), 1, &err);
 
   // Importantly, the session instance itself should have been destroyed!
   CHECK(is_destroyed());

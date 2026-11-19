@@ -49,7 +49,17 @@ mv License.md "$DEPS_DIR/jsonifier/LICENSE"
 mv Third_Party_Licenses.md "$DEPS_DIR/jsonifier/THIRD_PARTY_LICENSES.md"
 mv Version "$DEPS_DIR/jsonifier/VERSION"
 
+# update version information in src/jsonifier_version.h
+cat > "$BASE_DIR/src/jsonifier_version.h" <<EOF
+// This is an auto generated file, please do not edit.
+// Refer to tools/dep_updaters/update-jsonifier.sh
+#ifndef SRC_JSONIFIER_VERSION_H_
+#define SRC_JSONIFIER_VERSION_H_
+#define JSONIFIER_VERSION "$NEW_VERSION"
+#endif  // SRC_JSONIFIER_VERSION_H_
+EOF
+
 # Update the version number on maintaining-dependencies.md
 # and print the new version as the last line of the script as we need
 # to add it to $GITHUB_ENV variable
-finalize_version_update "jsonifier" "$NEW_VERSION"
+finalize_version_update "jsonifier" "$NEW_VERSION" "src/jsonifier_version.h"

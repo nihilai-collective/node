@@ -6,52 +6,14 @@
  */
 #pragma once
 
-#include <jsonifier-incl/utilities/string.hpp>
-#include <jsonifier-incl/utilities/string_view.hpp>
-#include <jsonifier-incl/utilities/error.hpp>
-#include <jsonifier-incl/utilities/str_to_i.hpp>
+#include <jsonifier-incl/parsing/parser.hpp>
+#include <jsonifier-incl/utilities/json_iterator.hpp>
 #include <jsonifier-incl/utilities/string_utils.hpp>
 #include <jsonifier-incl/utilities/simd.hpp>
-#include <jsonifier-incl/utilities/byteswap.hpp>
-
-namespace jsonifier::internal {
-
-	consteval array<bool, 256> genValidPostPrimitiveTable() {
-		array<bool, 256> table{};
-		table[static_cast<uint64_t>(',')]  = true;
-		table[static_cast<uint64_t>('}')]  = true;
-		table[static_cast<uint64_t>(']')]  = true;
-		table[static_cast<uint64_t>(' ')]  = true;
-		table[static_cast<uint64_t>('\t')] = true;
-		table[static_cast<uint64_t>('\n')] = true;
-		table[static_cast<uint64_t>('\r')] = true;
-		return table;
-	}
-
-	alignas(64) inline constexpr auto validPostPrimitiveTable{ genValidPostPrimitiveTable() };
-
-}
 
 namespace jsonifier::generic {
 
-	enum class error_codes : uint8_t {
-		success,
-		empty,
-		tape_error,
-		unclosed_container,
-		trailing_content,
-		incorrect_type,
-		no_such_field,
-		index_out_of_bounds,
-		number_error,
-		string_error,
-		t_atom_error,
-		f_atom_error,
-		n_atom_error,
-		invalid_json_pointer,
-		capacity,
-		count,
-	};
+	using parse_statuses = internal::parse_statuses;
 
 	template<bool minified> class generic_object;
 	template<bool minified> class generic_array;
@@ -61,9 +23,9 @@ namespace jsonifier::generic {
 
 namespace jsonifier::internal {
 
-	template<typename value_type> class alloc_buffer : internal::alloc_wrapper<value_type> {
+	template<typename value_type> class alloc_buffer : internal::aligned_allocator<value_type> {
 	  public:
-		using allocator = internal::alloc_wrapper<value_type>;
+		using allocator = internal::aligned_allocator<value_type>;
 
 		JSONIFIER_INLINE alloc_buffer() noexcept = default;
 
@@ -161,10 +123,10 @@ namespace jsonifier::internal {
 	struct utf8_span_step {
 		template<uint64_t index>
 		JSONIFIER_INLINE static unrestrict_t<read_buffer_ptr> impl(unrestrict_t<read_buffer_ptr>& current, read_buffer_ptr end, internal::utf8_validation_state& state) noexcept {
-			using simd_list_local					 = type_list_element_t<index, simd::avx_integer_list>;
-			static constexpr auto avx_type			 = simd_list_local::type::avx_type;
-			using simd_type_local					 = typename simd_type_wrapper<avx_type>::type;
-			static constexpr uint64_t bytesProcessed = simd_list_local::bytesProcessed;
+			using simd_list_local = type_list_element_t<index, simd::avx_integer_list>;
+			static constexpr auto avx_type{ simd_list_local::type::avx_type };
+			using simd_type_local = typename simd_type_wrapper<avx_type>::type;
+			static constexpr uint64_t bytesProcessed{ simd_list_local::bytesProcessed };
 			internal::utf8_register_validator<simd_type_wrapper<avx_type>> validator{ state };
 			while (static_cast<uint64_t>(end - current) >= bytesProcessed) {
 				validator.checkRegister(simd::gatherValuesU<simd_type_local>(current));

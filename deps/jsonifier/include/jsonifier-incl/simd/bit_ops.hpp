@@ -11,7 +11,7 @@
 namespace jsonifier::internal::simd {
 
 	template<uint16_types value_type> JSONIFIER_INLINE constexpr uint64_t countlZeroUnsafe(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countl_zero(value));
 		} else {
 #if JSONIFIER_LZCNT && JSONIFIER_ARCH_X64
@@ -27,7 +27,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint32_types value_type> JSONIFIER_INLINE constexpr uint64_t countlZeroUnsafe(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countl_zero(value));
 		} else {
 #if JSONIFIER_LZCNT && JSONIFIER_ARCH_X64
@@ -43,7 +43,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint64_types value_type> JSONIFIER_INLINE constexpr uint64_t countlZeroUnsafe(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countl_zero(value));
 		} else {
 #if JSONIFIER_LZCNT && JSONIFIER_ARCH_X64
@@ -59,7 +59,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint16_types value_type> JSONIFIER_INLINE constexpr uint64_t countrZeroUnsafe(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countr_zero(value));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64
@@ -75,7 +75,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint32_types value_type> JSONIFIER_INLINE constexpr uint64_t countrZeroUnsafe(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countr_zero(value));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64
@@ -91,7 +91,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint64_types value_type> JSONIFIER_INLINE constexpr uint64_t countrZeroUnsafe(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countr_zero(value));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64
@@ -107,7 +107,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint16_types value_type> JSONIFIER_INLINE constexpr uint64_t countlZero(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countl_zero(value));
 		} else {
 #if JSONIFIER_LZCNT && JSONIFIER_ARCH_X64
@@ -123,7 +123,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint32_types value_type> JSONIFIER_INLINE constexpr uint64_t countlZero(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countl_zero(value));
 		} else {
 #if JSONIFIER_LZCNT && JSONIFIER_ARCH_X64
@@ -139,7 +139,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint64_types value_type> JSONIFIER_INLINE constexpr uint64_t countlZero(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countl_zero(value));
 		} else {
 #if JSONIFIER_LZCNT && JSONIFIER_ARCH_X64
@@ -155,7 +155,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint16_types value_type> JSONIFIER_INLINE constexpr uint64_t countrZero(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countr_zero(value));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64
@@ -171,7 +171,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint32_types value_type> JSONIFIER_INLINE constexpr uint64_t countrZero(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countr_zero(value));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64
@@ -187,7 +187,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint64_types value_type> JSONIFIER_INLINE constexpr uint64_t countrZero(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::countr_zero(value));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64
@@ -203,7 +203,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint64_types value_type> JSONIFIER_INLINE constexpr uint64_t popcount(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(std::popcount(value));
 		} else {
 #if JSONIFIER_POPCNT && JSONIFIER_ARCH_X64
@@ -219,7 +219,7 @@ namespace jsonifier::internal::simd {
 	}
 
 	template<uint64_types value_type> JSONIFIER_INLINE constexpr uint64_t blsr(value_type value) noexcept {
-		if (std::is_constant_evaluated()) {
+		if consteval {
 			return static_cast<uint64_t>(value & (value - 1));
 		} else {
 #if JSONIFIER_BMI && JSONIFIER_ARCH_X64

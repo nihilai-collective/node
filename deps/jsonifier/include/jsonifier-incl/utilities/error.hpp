@@ -42,6 +42,11 @@ namespace jsonifier::internal {
 		exceeded_max_depth,
 		unexpected_token,
 		illegal_control_character,
+		incorrect_type,
+		no_such_field,
+		index_out_of_bounds,
+		invalid_json_pointer,
+		capacity,
 		count,
 	};
 
@@ -110,7 +115,7 @@ namespace jsonifier::internal {
 
 	inline void appendUnsigned(string& stream, uint64_t value) noexcept {
 		uint8_t buffer[24];
-		auto* end = to_chars<uint64_t>::impl(buffer, value);
+		auto* end{ to_chars<uint64_t>::impl(buffer, value) };
 		stream.append(std::bit_cast<const char*>(+buffer), static_cast<uint64_t>(end - buffer));
 	}
 
@@ -223,8 +228,8 @@ namespace jsonifier::internal {
 
 				line = static_cast<uint64_t>(std::count(rootIter, errorPos, '\n') + 1);
 
-				read_buffer_ptr scan		   = errorPos;
-				uint64_t distanceFromLineStart = 0;
+				read_buffer_ptr scan{ errorPos };
+				uint64_t distanceFromLineStart{ 0 };
 				while (scan > rootIter && *(scan - 1) != '\n') {
 					--scan;
 					++distanceFromLineStart;
@@ -232,7 +237,7 @@ namespace jsonifier::internal {
 				localIndex = distanceFromLineStart;
 
 				if (errorPos < endIter) {
-					uint64_t errorLength = std::min(static_cast<uint64_t>(16ULL), static_cast<uint64_t>(endIter - errorPos));
+					uint64_t errorLength{ std::min(static_cast<uint64_t>(16ULL), static_cast<uint64_t>(endIter - errorPos)) };
 					string_view view{ std::bit_cast<const char*>(errorPos), errorLength };
 					context = string{ std::begin(view), static_cast<uint64_t>(view.size()) };
 					for (auto& c: context) {
@@ -268,7 +273,7 @@ namespace jsonifier::internal {
 		}
 
 		inline static void collectValues(string& stream, const string& inputValues) noexcept {
-			for (uint64_t i = 0; i < 32 && i < inputValues.size(); ++i) {
+			for (uint64_t i{ 0 }; i < 32 && i < inputValues.size(); ++i) {
 				stream += "'";
 				appendEscapedByte(stream, inputValues[i]);
 				stream += "' ";
@@ -280,8 +285,8 @@ namespace jsonifier::internal {
 			return static_cast<error_class>(errorType);
 		}
 
-		inline std::string_view reportError() const noexcept {
-			return reportString.operator std::basic_string_view<char>();
+		inline string_view reportError() const noexcept {
+			return static_cast<string_view>(reportString);
 		}
 
 		std::source_location sourceLocation{};
@@ -296,13 +301,9 @@ namespace jsonifier::internal {
 		status_classes status_class{};
 	};
 
-	template<uint64_t bufferSize> inline basic_stream<bufferSize>& operator<<(basic_stream<bufferSize>& os, const error& errorNew) noexcept {
-		os << errorNew.reportError();
-		return os;
-	}
-
-	inline std::ostream& operator<<(std::ostream& os, const error& errorNew) noexcept {
-		os << errorNew.reportError();
+	template<internal::ostream_types ostream_type> inline ostream_type& operator<<(ostream_type& os, const error& errorNew) noexcept {
+		string_view value{ errorNew.reportError() };
+		os.write(value.data(), static_cast<int64_t>(value.size()));
 		return os;
 	}
 

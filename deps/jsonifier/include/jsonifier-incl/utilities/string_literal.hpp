@@ -23,7 +23,7 @@ namespace jsonifier::internal {
 		JSONIFIER_INLINE constexpr string_literal() noexcept = default;
 
 		JSONIFIER_INLINE constexpr string_literal(const char (&str)[sizeVal]) noexcept {
-			for (uint64_t x = 0; x < length; ++x) {
+			for (uint64_t x{ 0 }; x < length; ++x) {
 				values[x] = str[x];
 			}
 			values[length] = '\0';
@@ -99,31 +99,26 @@ namespace jsonifier::internal {
 
 	template<uint64_t sizeVal> string_literal(const char (&)[sizeVal]) -> string_literal<sizeVal>;
 
-	template<uint64_t size, uint64_t bufferSize> inline basic_stream<bufferSize>& operator<<(basic_stream<bufferSize>& os, const string_literal<size>& input) noexcept {
-		os << std::basic_string_view<char>{ input.data(), input.size() };
-		return os;
-	}
-
-	template<uint64_t size> inline std::ostream& operator<<(std::ostream& os, const string_literal<size>& input) noexcept {
-		os << std::basic_string_view<char>{ input.data(), input.size() };
+	template<ostream_types ostream_type, uint64_t size> inline ostream_type& operator<<(ostream_type& os, const string_literal<size>& input) noexcept {
+		os.write(input.data(), static_cast<int64_t>(input.size()));
 		return os;
 	}
 
 	template<string_literal literal> consteval uint64_t escapedKeyLength() noexcept {
 		uint64_t newLength{};
-		for (uint64_t x = 0; x < literal.size(); ++x) {
-			const char c = literal[x];
+		for (uint64_t x{ 0 }; x < literal.size(); ++x) {
+			const char c{ literal[x] };
 			newLength += (c == '"' || c == '\\') ? 2 : 1;
 		}
 		return newLength;
 	}
 
 	template<string_literal literal> consteval string_literal<escapedKeyLength<literal>() + 1> escapeKeyLiteral() noexcept {
-		constexpr uint64_t newLength{ escapedKeyLength<literal>() };
+		static constexpr uint64_t newLength{ escapedKeyLength<literal>() };
 		string_literal<newLength + 1> returnValues{};
 		uint64_t outIndex{};
-		for (uint64_t x = 0; x < literal.size(); ++x) {
-			const char c = literal[x];
+		for (uint64_t x{ 0 }; x < literal.size(); ++x) {
+			const char c{ literal[x] };
 			if (c == '"' || c == '\\') {
 				returnValues[outIndex] = '\\';
 				++outIndex;

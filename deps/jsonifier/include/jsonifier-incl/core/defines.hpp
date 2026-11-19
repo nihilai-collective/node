@@ -9,19 +9,20 @@
 #include <jsonifier-incl/simd/jsonifier_cpu_instructions.hpp>
 #include <source_location>
 #include <unordered_map>
-#include <string_view>
+#include <stdexcept>
 #include <algorithm>
 #include <optional>
+#include <utility>
 #include <variant>
 #include <cstring>
-#include <utility>
+#include <cstdlib>
+#include <string>
+#include <cctype>
 #include <memory>
 #include <cfloat>
-#include <chrono>
 #include <vector>
 #include <atomic>
 #include <limits>
-#include <cstdlib>
 #include <bit>
 
 #if !defined(JSONIFIER_ARCH_X64)
@@ -196,20 +197,6 @@
 	#endif
 #endif
 
-#if !defined(JSONIFIER_EXCEPTIONS)
-	#if defined(__cpp_exceptions) || defined(_CPPUNWIND)
-		#define JSONIFIER_EXCEPTIONS 1
-	#else
-		#define JSONIFIER_EXCEPTIONS 0
-	#endif
-#endif
-
-#if JSONIFIER_EXCEPTIONS
-	#define JSONIFIER_THROW(...) throw __VA_ARGS__
-#else
-	#define JSONIFIER_THROW(...) std::abort()
-#endif
-
 #if !defined(JSONIFIER_NO_SANITIZE_ADDRESS)
 	#if JSONIFIER_COMPILER_MSVC
 		#define JSONIFIER_NO_SANITIZE_ADDRESS __declspec(no_sanitize_address)
@@ -268,20 +255,12 @@
 	#error "Sorry, this compiler is not supported."
 #endif
 
-#if !defined(JSONIFIER_HAS_INT128)
-	#if defined(__SIZEOF_INT128__)
-		#define JSONIFIER_HAS_INT128 1
-	#else
-		#define JSONIFIER_HAS_INT128 0
-	#endif
+#if !JSONIFIER_PLATFORM_WINDOWS && !JSONIFIER_PLATFORM_MAC && !JSONIFIER_PLATFORM_LINUX && !JSONIFIER_PLATFORM_ANDROID
+	#error "Sorry, this platform is not supported."
 #endif
 
-#if (JSONIFIER_AVX || JSONIFIER_AVX2 || JSONIFIER_AVX512) && !JSONIFIER_ARCH_X64
-	#error "The AVX backends require an x86-64 target."
-#endif
-
-#if (JSONIFIER_NEON || JSONIFIER_SVE2) && !JSONIFIER_ARCH_ARM64
-	#error "The NEON and SVE2 backends require an arm64 target."
+#if !JSONIFIER_ARCH_ARM64 && !JSONIFIER_ARCH_X64
+	#error "Sorry, this arch is not supported."
 #endif
 
 #if JSONIFIER_ANY_AVX || (JSONIFIER_ARCH_X64 && (JSONIFIER_LZCNT || JSONIFIER_POPCNT || JSONIFIER_BMI))
@@ -300,7 +279,7 @@
 
 #if JSONIFIER_PLATFORM_WINDOWS
 	#include <windows.h>
-#else
+#elif JSONIFIER_PLATFORM_LINUX || JSONIFIER_PLATFORM_MAC || JSONIFIER_PLATFORM_ANDROID
 	#include <sys/types.h>
 	#include <sys/mman.h>
 	#include <unistd.h>
@@ -385,5 +364,5 @@ namespace jsonifier::internal {
 #define reinterpret_cast jsonifier::internal::banned_reinterpret_cast
 #define const_cast jsonifier::internal::banned_const_cast
 #define dynamic_cast jsonifier::internal::banned_dynamic_cast
-#define memcpy(...) internal::jsonifierFailMemcpyImpl(__VA_ARGS__)
-#define memmove(...) internal::jsonifierFailMemmoveImpl(__VA_ARGS__)
+#define memcpy(...) jsonifierFailMemcpyImpl(__VA_ARGS__)
+#define memmove(...) jsonifierFailMemmoveImpl(__VA_ARGS__)

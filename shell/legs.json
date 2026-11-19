@@ -1,0 +1,7 @@
+[
+  { "os": "ubuntu-latest", "compiler": "gcc", "name": "Linux GCC AVX-512", "slug": "linux-gcc-avx512", "branch_base": "temp-benchmarks-avx512-ubuntu-gcc", "commit_msg": "Results - Linux-GCC-AVX-512", "cpu_expect": "AMD EPYC 9V45", "cpu_reject": "" },
+  { "os": "ubuntu-latest", "compiler": "clang", "name": "Linux Clang AVX-512", "slug": "linux-clang-avx512", "branch_base": "temp-benchmarks-avx512-ubuntu-clang", "commit_msg": "Results - Linux-Clang-AVX-512", "cpu_expect": "AMD EPYC 9V45", "cpu_reject": "" },
+  { "os": "windows-latest", "compiler": "clang-cl", "name": "Windows ClangCL AVX-512", "slug": "windows-clang-cl-avx512", "branch_base": "temp-benchmarks-avx512-windows-clang-cl", "commit_msg": "Results - Windows-ClangCL-AVX-512", "cpu_expect": "AMD EPYC 9V45", "cpu_reject": "" },
+  { "os": "macos-latest", "compiler": "clang", "name": "macOS Clang NEON", "slug": "macos-clang-neon", "branch_base": "temp-benchmarks-neon-macos-clang", "commit_msg": "Results - macOS-Clang-NEON", "cpu_expect": "", "cpu_reject": "M1" },
+  { "os": "macos-latest", "compiler": "gcc", "name": "macOS GCC NEON", "slug": "macos-gcc-neon", "branch_base": "temp-benchmarks-neon-macos-gcc", "commit_msg": "Results - macOS-GCC-NEON", "cpu_expect": "", "cpu_reject": "M1" }
+]

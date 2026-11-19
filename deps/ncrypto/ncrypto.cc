@@ -3107,11 +3107,15 @@ bool KDF::derive(const Buffer<unsigned char>& out,
 
 const EVP_MD* getDigestByName(const char* name) {
 #if NCRYPTO_USE_BORINGSSL
-  // BoringSSL exposes SHA-3 through EVP_MD descriptors without registering
-  // their names or assigning them NIDs.
+  // BoringSSL exposes SHA-3 and SHAKE256 through EVP_MD descriptors without
+  // registering their names or assigning them NIDs.
   if (CaseInsensitiveNameEqual()(name, "sha3-256")) return EVP_sha3_256();
   if (CaseInsensitiveNameEqual()(name, "sha3-384")) return EVP_sha3_384();
   if (CaseInsensitiveNameEqual()(name, "sha3-512")) return EVP_sha3_512();
+  if (CaseInsensitiveNameEqual()(name, "shake256") ||
+      CaseInsensitiveNameEqual()(name, "shake-256")) {
+    return EVP_shake256();
+  }
 #endif
   return EVP_get_digestbyname(name);
 }
@@ -3632,6 +3636,8 @@ const BoringSSLKeyAlgorithm kBoringSSLKeyAlgorithms[] = {
     {KeyAlgorithm::ML_DSA_87.name(), EVP_PKEY_ML_DSA_87, EVP_pkey_ml_dsa_87},
     {KeyAlgorithm::ML_KEM_768.name(), EVP_PKEY_ML_KEM_768, EVP_pkey_ml_kem_768},
     {KeyAlgorithm::ML_KEM_1024.name(), EVP_PKEY_ML_KEM_1024, EVP_pkey_ml_kem_1024},
+    {KeyAlgorithm::SLH_DSA_SHA2_128S.name(), EVP_PKEY_SLH_DSA_SHA2_128S, EVP_pkey_slh_dsa_sha2_128s},
+    {KeyAlgorithm::SLH_DSA_SHAKE_256F.name(), EVP_PKEY_SLH_DSA_SHAKE_256F, EVP_pkey_slh_dsa_shake_256f},
 };
 // NOLINTEND(whitespace/line_length)
 // clang-format on
@@ -8277,8 +8283,7 @@ const EVP_MD* EVPMDCtxPointer::getDigest() const {
 }
 
 bool EVPMDCtxPointer::hasXofFlag() const {
-  if (!ctx_) return false;
-  return (EVP_MD_flags(getDigest()) & EVP_MD_FLAG_XOF) == EVP_MD_FLAG_XOF;
+  return Digest(getDigest()).isXof();
 }
 
 bool EVPMDCtxPointer::copyTo(const EVPMDCtxPointer& other) const {
@@ -9052,6 +9057,18 @@ size_t Dsa::getDivisorLength() const {
 size_t Digest::size() const {
   if (md_ == nullptr) return 0;
   return EVP_MD_size(md_);
+}
+
+bool Digest::isXof() const {
+  if (md_ == nullptr) return false;
+#if NCRYPTO_USE_OPENSSL_PROVIDER
+  return (EVP_MD_flags(md_) & EVP_MD_FLAG_XOF) != 0;
+#elif defined(OPENSSL_IS_BORINGSSL)
+  // BoringSSL does not set EVP_MD_FLAG_XOF on its SHAKE256 descriptor.
+  return md_ == EVP_shake256();
+#else
+#error "Unsupported crypto backend"
+#endif
 }
 
 #if !NCRYPTO_USE_BORINGSSL

@@ -1,0 +1,11 @@
+Leg: Windows ClangCL AVX-512
+CPU: AMD EPYC 9V45 96-Core Processor
+Compiler: clang-cl (vcbuild.bat)
+Baseline (simdjson, padding reserved): c91d8aa1a51058f7eaf36b86e9f9ea2ac7e11277+old
+Candidate (Jsonifier): 0502c8ef0b32e1299f196410889d63ceedefd8be
+Corpus: /d/a/node/node/node/deps
+Runs: 30
+Attempt: 3
+
+######## Binaries
+Missing /d/a/node/node/bins/old/node; see the build logs in /d/a/node/node/bins.

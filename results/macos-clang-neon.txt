@@ -1,0 +1,48 @@
+Leg: macOS Clang NEON
+CPU: Apple M2 Pro (Virtual)
+Compiler: Homebrew clang version 23.1.5
+Baseline (simdjson, padding reserved): c91d8aa1a51058f7eaf36b86e9f9ea2ac7e11277+old
+Candidate (Jsonifier): 0502c8ef0b32e1299f196410889d63ceedefd8be
+Corpus: /Users/runner/work/node/node/node/deps
+Runs: 30
+Attempt: 2
+
+######## Binaries
+old: v28.0.0-pre, simdjson 5.1.1
+new: v28.0.0-pre, jsonifier 1.0.2
+
+######## compare.js: old = simdjson with padding reserved, new = Jsonifier (Welch's t-test)
+                                                            confidence   improvement   accuracy (*)    (**)   (***)
+module/package-json-corpus.js n=200000 bucket='0-512'        **             -5.07 %   ±3.59%  ±4.78%  ±6.23%
+module/package-json-corpus.js n=200000 bucket='512-1024'                    -4.96 %   ±5.11%  ±6.80%  ±8.85%
+module/package-json-corpus.js n=200000 bucket='1024-2048'                   -2.18 %   ±4.73%  ±6.29%  ±8.19%
+module/package-json-corpus.js n=200000 bucket='2048-65536'   **             -6.55 %   ±3.82%  ±5.08%  ±6.62%
+module/package-json-large.js n=20000 size=16384             ***             -8.10 %   ±1.48%  ±1.97%  ±2.57%
+module/package-json-large.js n=20000 size=38912             ***             -8.30 %   ±1.58%  ±2.10%  ±2.73%
+module/package-json-large.js n=20000 size=65536             ***             -6.70 %   ±1.39%  ±1.85%  ±2.41%
+
+                                                               -10.4%             0%             +10.4%
+module/package-json-corpus.js n=200000 bucket='0-512'          ░░░░░░░██████████|                     -5.07% **
+module/package-json-corpus.js n=200000 bucket='512-1024'     ░░░░░░░░░▓▓▓▓▓▓▓▓▓▓|                     -4.96% 
+module/package-json-corpus.js n=200000 bucket='1024-2048'          ░░░░░░░░░▓▓▓▓|░░░░                 -2.18% 
+module/package-json-corpus.js n=200000 bucket='2048-65536'  ░░░░░░░█████████████|                     -6.55% **
+module/package-json-large.js n=20000 size=16384               ░░████████████████|                     -8.10% ***
+module/package-json-large.js n=20000 size=38912              ░░░████████████████|                     -8.30% ***
+module/package-json-large.js n=20000 size=65536                 ░░░█████████████|                     -6.70% ***
+
+Rates were scaled by 1000x into HdrHistogram (3 significant figures).
+Use --scale to adjust precision if needed.
+
+Be aware that when doing many comparisons the risk of a false-positive
+result increases. In this case, there are 7 comparisons, you can thus
+expect the following amount of false-positive results:
+  0.35 false positives, when considering a   5% risk acceptance (*, **, ***),
+  0.07 false positives, when considering a   1% risk acceptance (**, ***),
+  0.01 false positives, when considering a 0.1% risk acceptance (***)
+
+The stars above are per-benchmark and uncorrected. Adjusting for the size of
+this comparison set (Holm-Bonferroni), 5 comparisons remain significant at 5%.
+--max-regression uses the corrected values.
+
+######## Verdict
+PASS 🦎

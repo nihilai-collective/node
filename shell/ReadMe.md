@@ -21,6 +21,8 @@ By default the candidate is the tip of `add-jsonifier-main`, the PR branch with 
 | Windows ClangCL AVX-512 | windows-latest, `vcbuild.bat release` | AMD EPYC 9V45 |
 | macOS Clang NEON | macos-latest, Homebrew llvm | rejects M1 |
 | macOS GCC NEON | macos-latest, Homebrew gcc | rejects M1 |
+| Linux GCC AVX2 cap | as Linux GCC AVX-512, with `NODE_JSONIFIER_ISA=avx2` | AMD EPYC 9V45 |
+| Windows ClangCL AVX2 cap | as Windows ClangCL AVX-512, with `NODE_JSONIFIER_ISA=avx2` | AMD EPYC 9V45 |
 
 Node 24 and later only build with ClangCL on Windows (`vcbuild.bat` enforces it), so the Windows leg is ClangCL rather than MSVC. The Windows build exports `LINK=synchronization.lib` for both binaries: on the current runner image, V8's `mksnapshot` at the baseline commit fails to link `WaitOnAddress`, `WakeByAddressSingle` and `WakeByAddressAll` without it, and `lld-link` reads `LINK` like MSVC's linker does. For a parser-only MSVC number, use `buddy-tools/jsonifier/node/msvc_harness`.
 
@@ -28,7 +30,7 @@ Unix legs configure both binaries with `--without-lief`: upstream's bundled LIEF
 
 The macOS GCC leg also sets `v8_enable_system_instrumentation` to 0 in `tools/v8_gypfiles/features.gypi` for both builds (through `PRE_BUILD`, run after each checkout): V8's os_signpost tracing includes the SDK's `os/log.h`, which needs Clang's `__builtin_os_log_format` and refuses to compile under GCC. It also drops `-Werror=undefined-inline` and `-Werror=ctad-maybe-unsupported` from `node.gyp`'s `xcode_settings`, which gyp hands to GCC on macOS even though they are Clang-only (`node.gypi` already gates the same flags on `clang==1`). Finally it exports `-flax-vector-conversions` through `CFLAGS`, `CXXFLAGS` and their `_host` variants: `tools/v8_gypfiles/toolchain.gypi` adds that flag for GCC through `cflags`, which gyp's Xcode flavor ignores, and V8's NEON code in `src/objects/simd.cc` needs it.
 
-Set `ONLY_LEGS` in the workflow (names joined by `|`) to run a subset, and `RUNS` to change the sample count (default 30).
+The AVX2 cap legs run the same Jsonifier binary with its runtime dispatch capped at the AVX2 tier (`NODE_JSONIFIER_ISA` is set only for the benchmark step, and simdjson ignores it), to compare node's AVX-512 and AVX2 Jsonifier tiers on the same CPU. Legs marked `"sweep": true` in `legs.json` (the three AVX-512 legs) then run `shell/sweep-leg.sh`: for every `SWEEP_PODS` x `SWEEP_BLOCKS` pair (default `0 256 1024 4096 65536` x `1 4 8`) `shell/set-avx512-config.py` rewrites only the AVX-512 `smallDocumentBytes` and `simdBlocksPerStep` lines of the candidate's `simd_config.hpp`, the candidate is rebuilt incrementally (`make` on Unix, `vcbuild.bat release noprojgen` on Windows, so only the Jsonifier units recompile before the link), and compare.js runs it against the simdjson baseline for `SWEEP_RUNS` runs (default 15). Each config's table lands in `<slug>-sweep-p<pod>-b<blocks>.txt`, and `<slug>-sweep.md` ranks them. Set `ONLY_LEGS` in the workflow (names joined by `|`) to run a subset, and `RUNS` to change the sample count (default 30).
 
 ## Local
 

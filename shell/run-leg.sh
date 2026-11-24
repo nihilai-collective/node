@@ -27,6 +27,7 @@ section() {
   echo "Baseline (simdjson, padding reserved): $(cat "$BINS/old/sha.txt" 2>/dev/null || echo "$BASE_SHA+old")"
   echo "Candidate (Jsonifier): $(cat "$BINS/new/sha.txt" 2>/dev/null || echo "$CANDIDATE_SHA")"
   echo "Corpus: ${PACKAGE_JSON_CORPUS:-<candidate checkout>/deps}"
+  echo "Jsonifier ISA cap: ${NODE_JSONIFIER_ISA:-none (best supported tier)}"
   echo "Runs: $RUNS"
   echo "Attempt: ${ATTEMPT:-1}"
 } | tee "$RESULTS"

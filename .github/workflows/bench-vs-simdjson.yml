@@ -40,7 +40,7 @@ env:
   RESULT_BRANCH_PREFIX: benchmarks-results
   CANDIDATE_REF: ${{ inputs.candidate_ref || 'bench-candidate-node-new' }}
   BASE_REF: ${{ inputs.base_ref || 'bench-baseline-simdjson-master' }}
-  ONLY_LEGS: ''
+  ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512|Linux GCC AVX2 cap|Windows ClangCL AVX2 cap'
   RUNS: '30'
 
 jobs:
@@ -241,10 +241,26 @@ jobs:
         shell: bash
         env:
           CPU: ${{ steps.gate.outputs.cpu }}
+          NODE_JSONIFIER_ISA: ${{ matrix.config.isa_cap }}
         run: |
           set +e
           bash harness/shell/run-leg.sh harness bins results node/deps
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Sweep AVX-512 small-document cutoff and blocks per step
+        if: steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code == '0' && matrix.config.sweep
+        continue-on-error: true
+        shell: bash
+        env:
+          SCCACHE_GHA_ENABLED: 'true'
+          SCCACHE_IDLE_TIMEOUT: '0'
+        run: |
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            export CC="sccache $C_BIN" CXX="sccache $CXX_BIN"
+          else
+            export LINK="synchronization.lib ${LINK:-}"
+          fi
+          bash harness/shell/sweep-leg.sh harness node bins results node/deps
 
       - name: Upload build logs on failure
         if: always() && steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code != '0'

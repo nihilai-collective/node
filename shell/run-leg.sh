@@ -57,7 +57,7 @@ fi
 cd "$HARNESS/benchmark"
 section "compare.js: old = simdjson with padding reserved, new = Jsonifier (Welch's t-test)"
 "$NEW" compare.js --old "$OLD" --new "$NEW" --runs "$RUNS" --no-progress \
-  --filter package-json-parse --filter package-json-corpus --filter package-json-large \
+  --filter package-json-corpus \
   --csv "$RESULTS_DIR/${SLUG}.csv" --analyze module 2>&1 | tee -a "$RESULTS"
 status=${PIPESTATUS[0]}
 

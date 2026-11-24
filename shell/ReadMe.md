@@ -8,9 +8,7 @@ By default the candidate is the tip of `add-jsonifier-main`, the PR branch with 
 
 ## Benchmarks
 
-- `benchmark/module/package-json-parse.js`: `parsePackageJSON` on synthetic minimal, typical and large package.json payloads.
-- `benchmark/module/package-json-corpus.js`: `parsePackageJSON` cycling through every unique package.json under the corpus folder (default: the candidate checkout's `deps/`, which holds npm's and the other bundled `node_modules`), split into size buckets 0-512, 512-1024, 1024-2048 and 2048-65536 bytes. Files that are not a JSON object under `JSON.parse` are skipped, so both binaries see the same set. `PACKAGE_JSON_CORPUS` overrides the folder.
-- `benchmark/module/package-json-large.js`: `parsePackageJSON` on one deterministic synthetic package.json of 16, 38 and 64 KB (exports, imports, scripts and dependency maps), since the bundled corpus tops out under 8 KB.
+- `benchmark/module/package-json-corpus.js`: `parsePackageJSON` cycling through every unique package.json under the corpus folder (default: the candidate checkout's `deps/`, which holds npm's and the other bundled `node_modules`), all sizes mixed in one pass, since that is what node does when it resolves modules. Files that are not a JSON object under `JSON.parse` are skipped, so both binaries see the same set. `PACKAGE_JSON_CORPUS` overrides the folder. It is the only benchmark the legs run; `package-json-parse.js` and `package-json-large.js` stay in the tree for manual runs.
 
 ## CI
 

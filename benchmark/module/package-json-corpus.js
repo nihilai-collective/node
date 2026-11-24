@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 
 const bench = common.createBenchmark(main, {
-  bucket: ['0-512', '512-1024', '1024-2048', '2048-65536'],
   n: [2e5],
 }, { flags: ['--expose-internals', '--no-warnings'] });
 
@@ -35,7 +34,7 @@ function isPlainObjectJson(text) {
   }
 }
 
-function loadCorpus(low, high) {
+function loadCorpus() {
   const root = process.env.PACKAGE_JSON_CORPUS ||
     path.resolve(__dirname, '..', '..', 'deps');
   const files = [];
@@ -45,7 +44,6 @@ function loadCorpus(low, high) {
   const corpus = [];
   for (const file of files) {
     const source = fs.readFileSync(file);
-    if (source.length < low || source.length >= high) continue;
     const text = source.toString('utf8');
     if (seen.has(text) || !isPlainObjectJson(text)) continue;
     seen.add(text);
@@ -54,12 +52,11 @@ function loadCorpus(low, high) {
   return corpus;
 }
 
-function main({ bucket, n }) {
+function main({ n }) {
   const { internalBinding } = require('internal/test/binding');
   const { parsePackageJSON } = internalBinding('modules');
-  const [low, high] = bucket.split('-').map(Number);
-  const corpus = loadCorpus(low, high);
-  assert.ok(corpus.length > 0, `no package.json files between ${low} and ${high} bytes`);
+  const corpus = loadCorpus();
+  assert.ok(corpus.length > 0, 'no package.json files found');
 
   for (const { source, jsonPath } of corpus) {
     assert.ok(Array.isArray(parsePackageJSON(source, jsonPath)), jsonPath);

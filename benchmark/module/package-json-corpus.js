@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const bench = common.createBenchmark(main, {
-  n: [2e5],
+  n: [2e6],
 }, { flags: ['--expose-internals', '--no-warnings'] });
 
 function collect(dir, found) {

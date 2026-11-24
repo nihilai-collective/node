@@ -8,7 +8,7 @@ By default the candidate is the tip of `add-jsonifier-main`, the PR branch with 
 
 ## Benchmarks
 
-- `benchmark/module/package-json-corpus.js`: `parsePackageJSON` cycling through every unique package.json under the corpus folder (default: the candidate checkout's `deps/`, which holds npm's and the other bundled `node_modules`), all sizes mixed in one pass, since that is what node does when it resolves modules. Files that are not a JSON object under `JSON.parse` are skipped, so both binaries see the same set. `PACKAGE_JSON_CORPUS` overrides the folder. It is the only benchmark the legs run; `package-json-parse.js` and `package-json-large.js` stay in the tree for manual runs.
+- `benchmark/module/package-json-corpus.js`: `parsePackageJSON` cycling through every unique package.json under the corpus folder (default: the candidate checkout's `deps/`, which holds npm's and the other bundled `node_modules`), all sizes mixed in one pass, since that is what node does when it resolves modules. Files that are not a JSON object under `JSON.parse` are skipped, so both binaries see the same set. `PACKAGE_JSON_CORPUS` overrides the folder. Each run makes 2,000,000 calls: at 200,000 a run lasts about 0.13 s, and the JIT warmup and first-touch costs both binaries share diluted a steady-state gap of about 6% (WSL GCC 16, AVX2) to about 1%, inside the noise. It is the only benchmark the legs run; `package-json-parse.js` and `package-json-large.js` stay in the tree for manual runs.
 
 ## CI
 

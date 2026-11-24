@@ -41,7 +41,8 @@ env:
   CANDIDATE_REF: ${{ inputs.candidate_ref || 'bench-candidate-node-new' }}
   BASE_REF: ${{ inputs.base_ref || 'bench-baseline-simdjson-master' }}
   ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512'
-  RUN_SWEEP: 'true'
+  RUN_SWEEP: 'false'
+  RUN_PROFILE: 'true'
   SWEEP_PODS: '0 128 256 512 2048'
   SWEEP_BLOCKS: '1 2 4'
   RUNS: '30'
@@ -249,6 +250,26 @@ jobs:
           set +e
           bash harness/shell/run-leg.sh harness bins results node/deps
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Profile both binaries on the whole corpus
+        if: steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code == '0' && matrix.config.sweep && env.RUN_PROFILE == 'true'
+        continue-on-error: true
+        shell: bash
+        run: |
+          bash harness/shell/profile-leg.sh harness bins results node/deps traces
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp node/out/Release/node.pdb traces/new-node.pdb
+            cp bins/new/node.exe traces/new-node.exe
+          fi
+
+      - name: Upload profiles
+        if: steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code == '0' && matrix.config.sweep && env.RUN_PROFILE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-${{ matrix.config.slug }}-attempt-${{ inputs.attempt }}
+          path: traces/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Sweep AVX-512 small-document cutoff and blocks per step
         if: steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code == '0' && matrix.config.sweep && env.RUN_SWEEP == 'true'

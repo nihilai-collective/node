@@ -40,7 +40,7 @@ env:
   RESULT_BRANCH_PREFIX: benchmarks-results
   CANDIDATE_REF: ${{ inputs.candidate_ref || 'bench-candidate-node-new' }}
   BASE_REF: ${{ inputs.base_ref || 'bench-baseline-simdjson-master' }}
-  ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512'
+  ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512|macOS Clang NEON|macOS GCC NEON'
   RUN_SWEEP: 'false'
   RUN_PROFILE: 'true'
   SWEEP_PODS: '0 128 256 512 2048'

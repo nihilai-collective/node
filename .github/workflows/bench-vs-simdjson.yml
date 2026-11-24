@@ -40,7 +40,8 @@ env:
   RESULT_BRANCH_PREFIX: benchmarks-results
   CANDIDATE_REF: ${{ inputs.candidate_ref || 'bench-candidate-node-new' }}
   BASE_REF: ${{ inputs.base_ref || 'bench-baseline-simdjson-master' }}
-  ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512|Linux GCC AVX2 cap|Windows ClangCL AVX2 cap'
+  ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512'
+  RUN_SWEEP: 'false'
   RUNS: '30'
 
 jobs:
@@ -248,7 +249,7 @@ jobs:
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
       - name: Sweep AVX-512 small-document cutoff and blocks per step
-        if: steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code == '0' && matrix.config.sweep
+        if: steps.gate.outputs.rejected == 'false' && steps.run.outputs.exit_code == '0' && matrix.config.sweep && env.RUN_SWEEP == 'true'
         continue-on-error: true
         shell: bash
         env:

@@ -54,16 +54,16 @@ class JsonWalker {
       }
       case jsonifier::json_types::null:
         if (!value.isNull()) {
-          return Name(jsonifier::internal::parse_statuses::invalid_null_value);
+          return Name(jsonifier::generic::error_codes::n_atom_error);
         }
         sink->Null();
         return {};
       default:
-        return Name(jsonifier::internal::parse_statuses::unexpected_token);
+        return Name(jsonifier::generic::error_codes::incorrect_type);
     }
   }
 
-  static std::string_view Name(jsonifier::internal::parse_statuses code) {
+  static std::string_view Name(jsonifier::generic::error_codes code) {
     return jsonifier::internal::getName(code)
         .operator std::basic_string_view<char>();
   }
@@ -71,8 +71,8 @@ class JsonWalker {
  private:
   static constexpr size_t kMaxDepth = 1024;
   static constexpr std::string_view kTooDeep = "depth_limit";
-  static constexpr jsonifier::internal::parse_statuses kSuccess =
-      jsonifier::internal::parse_statuses::success;
+  static constexpr jsonifier::generic::error_codes kSuccess =
+      jsonifier::generic::error_codes::success;
 
   static std::string_view WalkObject(const GenericValue& value,
                                      json::JsonEventSink* sink,
@@ -134,9 +134,9 @@ std::string_view WalkJson(std::string_view json, json::JsonEventSink* sink) {
   if (json.starts_with(kJsonifierUtf8Bom)) {
     json.remove_prefix(kJsonifierUtf8Bom.size());
   }
-  jsonifier::jsonifier_core<> parser;
+  jsonifier::jsonifier_core parser;
   GenericDocument document = parser.iterate(json);
-  if (document.error() != jsonifier::internal::parse_statuses::success) {
+  if (document.error() != jsonifier::generic::error_codes::success) {
     return JsonWalker::Name(document.error());
   }
   return JsonWalker::Walk(document, sink, 0);

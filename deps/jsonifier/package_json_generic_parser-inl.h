@@ -70,16 +70,16 @@ class GenericParser final : public PackageJSONBackendParser {
     }
 
     GenericDocument document = parser_.iterate(json);
-    if (document.error() != jsonifier::internal::parse_statuses::success) {
+    if (document.error() != jsonifier::generic::error_codes::success) {
       return false;
     }
     GenericObject main_object = document.getObject();
-    if (main_object.error() != jsonifier::internal::parse_statuses::success) {
+    if (main_object.error() != jsonifier::generic::error_codes::success) {
       return false;
     }
 
     for (GenericField field : main_object) {
-      if (field.error() != jsonifier::internal::parse_statuses::success) {
+      if (field.error() != jsonifier::generic::error_codes::success) {
         return false;
       }
       const PackageField kind = ClassifyKey(ToView(field.rawKey()));
@@ -91,14 +91,14 @@ class GenericParser final : public PackageJSONBackendParser {
       switch (kind) {
         case PackageField::kName:
           if (value.getString(scratch_) !=
-              jsonifier::internal::parse_statuses::success) {
+              jsonifier::generic::error_codes::success) {
             return false;
           }
           sink->SetName(ToView(scratch_));
           break;
         case PackageField::kMain:
           if (value.getString(scratch_) ==
-              jsonifier::internal::parse_statuses::success) {
+              jsonifier::generic::error_codes::success) {
             sink->SetMain(ToView(scratch_));
           }
           break;
@@ -117,7 +117,7 @@ class GenericParser final : public PackageJSONBackendParser {
         case PackageField::kType: {
           std::string_view type;
           if (value.getString(type) !=
-              jsonifier::internal::parse_statuses::success) {
+              jsonifier::generic::error_codes::success) {
             return false;
           }
           if (type == "commonjs" || type == "module") {
@@ -128,7 +128,7 @@ class GenericParser final : public PackageJSONBackendParser {
         case PackageField::kPrivate: {
           bool is_private;
           if (value.getBool(is_private) ==
-              jsonifier::internal::parse_statuses::success) {
+              jsonifier::generic::error_codes::success) {
             sink->SetPrivate(is_private);
           }
           break;
@@ -137,7 +137,7 @@ class GenericParser final : public PackageJSONBackendParser {
           if (value.type() == jsonifier::json_types::object) {
             jsonifier::string_view raw{};
             if (value.rawJson(raw) !=
-                jsonifier::internal::parse_statuses::success) {
+                jsonifier::generic::error_codes::success) {
               return false;
             }
             sink->SetScripts(ToView(raw));
@@ -158,7 +158,7 @@ class GenericParser final : public PackageJSONBackendParser {
       case jsonifier::json_types::object:
       case jsonifier::json_types::array: {
         jsonifier::string_view raw{};
-        if (value.rawJson(raw) != jsonifier::internal::parse_statuses::success) {
+        if (value.rawJson(raw) != jsonifier::generic::error_codes::success) {
           return false;
         }
         (sink->*setter)(ToView(raw));
@@ -166,7 +166,7 @@ class GenericParser final : public PackageJSONBackendParser {
       }
       case jsonifier::json_types::string:
         if (value.getString(scratch_) !=
-            jsonifier::internal::parse_statuses::success) {
+            jsonifier::generic::error_codes::success) {
           return false;
         }
         (sink->*setter)(ToView(scratch_));
@@ -176,7 +176,7 @@ class GenericParser final : public PackageJSONBackendParser {
     }
   }
 
-  jsonifier::jsonifier_core<> parser_;
+  jsonifier::jsonifier_core parser_;
   jsonifier::string scratch_;
 };
 

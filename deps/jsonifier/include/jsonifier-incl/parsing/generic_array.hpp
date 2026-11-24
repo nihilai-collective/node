@@ -11,23 +11,23 @@
 namespace jsonifier::internal {
 
 	template<internal::number_shapes shape, internal::float_types float_type> struct float_array_shaped_loop {
-		JSONIFIER_INLINE static generic::parse_statuses impl(internal::document_state* doc, internal::read_structural_index_ptr position, uint64_t depth,
+		JSONIFIER_INLINE static generic::error_codes impl(internal::document_state* doc, internal::read_structural_index_ptr position, uint64_t depth,
 			std::vector<float_type>& out) noexcept {
-			const internal::read_buffer_ptr root{ doc->root };
-			const internal::read_structural_index_ptr tapeEnd{ doc->tapeEnd };
+			const internal::read_buffer_ptr root			  = doc->root;
+			const internal::read_structural_index_ptr tapeEnd = doc->tapeEnd;
 			while (position + 1 < tapeEnd) {
-				const internal::read_buffer_ptr valueStart{ root + *position };
-				const internal::read_buffer_ptr valueEnd{ root + *(position + 1) };
+				const internal::read_buffer_ptr valueStart = root + *position;
+				const internal::read_buffer_ptr valueEnd   = root + *(position + 1);
 				if (internal::typeTable[*valueStart] != json_types::number) [[unlikely]] {
 					doc->cursor = position;
-					return generic::parse_statuses::incorrect_type;
+					return generic::error_codes::incorrect_type;
 				}
-				const internal::read_buffer_ptr parsedEnd{ internal::float_parser<float_type>::template parseFloat<shape>(out.emplace_back(), valueStart, valueEnd) };
+				const internal::read_buffer_ptr parsedEnd = internal::float_parser<float_type>::template parseFloat<shape>(out.emplace_back(), valueStart, valueEnd);
 				if (!parsedEnd || (parsedEnd != valueEnd && !internal::validPostPrimitiveTable[static_cast<uint64_t>(*parsedEnd)])) [[unlikely]] {
 					doc->cursor = position;
-					return generic::parse_statuses::invalid_number_value;
+					return generic::error_codes::number_error;
 				}
-				const uint8_t separator{ *valueEnd };
+				const uint8_t separator = *valueEnd;
 				if (separator == internal::uint_c_v<','>) [[likely]] {
 					position += 2;
 					continue;
@@ -35,13 +35,13 @@ namespace jsonifier::internal {
 				if (separator == internal::uint_c_v<']'>) [[likely]] {
 					doc->cursor = position + 2;
 					doc->depth	= depth - 1;
-					return generic::parse_statuses::success;
+					return generic::error_codes::success;
 				}
 				doc->cursor = position + 1;
-				return generic::parse_statuses::missing_comma;
+				return generic::error_codes::tape_error;
 			}
 			doc->cursor = tapeEnd;
-			return generic::parse_statuses::missing_array_end;
+			return generic::error_codes::unclosed_container;
 		}
 	};
 
@@ -68,7 +68,7 @@ namespace jsonifier::generic {
 			}
 
 			JSONIFIER_INLINE value operator*() const noexcept {
-				return error_code == parse_statuses::success ? value{ doc, iter, depth } : value{ error_code };
+				return error_code == error_codes::success ? value{ doc, iter, depth + 1 } : value{ error_code };
 			}
 
 			JSONIFIER_INLINE bool operator==(const iterator& other) const noexcept {
@@ -76,26 +76,29 @@ namespace jsonifier::generic {
 			}
 
 			JSONIFIER_INLINE iterator& operator++() noexcept {
-				if (error_code != parse_statuses::success) [[unlikely]] {
+				if (error_code != error_codes::success) [[unlikely]] {
 					iter = nullptr;
 					return *this;
 				}
-				error_code = doc->advanceChild(iter, depth, internal::uint_c_v<']'>, iter);
+				error_code = doc->nextElement(depth, iter);
+				if (error_code != error_codes::success) [[unlikely]] {
+					iter = doc->cursor;
+				}
 				validateElementStart();
 				return *this;
 			}
 
 		  protected:
 			JSONIFIER_INLINE void validateElementStart() noexcept {
-				if (error_code == parse_statuses::success && iter && document_state::isCloser(doc->charAt(iter))) [[unlikely]] {
-					error_code = parse_statuses::unexpected_token;
+				if (error_code == error_codes::success && iter && document_state::isCloser(doc->charAt(iter))) [[unlikely]] {
+					error_code = error_codes::tape_error;
 				}
 			}
 
 			internal::read_structural_index_ptr iter{};
 			document_state* doc{};
 			uint64_t depth{};
-			parse_statuses error_code{ parse_statuses::success };
+			error_codes error_code{ error_codes::success };
 		};
 
 		JSONIFIER_INLINE generic_array() noexcept = default;
@@ -104,7 +107,7 @@ namespace jsonifier::generic {
 			: open{ openNew }, doc{ docNew }, depth{ depthNew } {
 		}
 
-		JSONIFIER_INLINE generic_array(parse_statuses errorCodeNew) noexcept : error_code{ errorCodeNew } {
+		JSONIFIER_INLINE generic_array(error_codes errorCodeNew) noexcept : error_code{ errorCodeNew } {
 		}
 
 		JSONIFIER_INLINE generic_array& operator=(const generic_array& other) noexcept {
@@ -118,70 +121,71 @@ namespace jsonifier::generic {
 		JSONIFIER_INLINE generic_array(const generic_array& other) noexcept : open{ other.open }, doc{ other.doc }, depth{ other.depth }, error_code{ other.error_code } {
 		}
 
-		[[nodiscard]] JSONIFIER_INLINE parse_statuses countElements(uint64_t& out) const noexcept {
-			if (error_code != parse_statuses::success) [[unlikely]] {
+		[[nodiscard]] JSONIFIER_INLINE error_codes countElements(uint64_t& out) const noexcept {
+			if (error_code != error_codes::success) [[unlikely]] {
 				return error_code;
 			}
 			out = 0;
-			for (auto iter{ begin() }; iter != end(); ++iter) {
-				if (const parse_statuses element_error_code = (*iter).error(); element_error_code != parse_statuses::success) [[unlikely]] {
+			for (auto iter = begin(); iter != end(); ++iter) {
+				if (const error_codes element_error_code = (*iter).error(); element_error_code != error_codes::success) [[unlikely]] {
 					return element_error_code;
 				}
 				++out;
 			}
-			return parse_statuses::success;
+			return error_codes::success;
 		}
 
 		JSONIFIER_INLINE iterator begin() const noexcept {
-			if (error_code != parse_statuses::success) [[unlikely]] {
+			if (error_code != error_codes::success) [[unlikely]] {
 				return iterator{};
 			}
-			document_state* const state = doc;
-			internal::read_structural_index_ptr position{ open + 1 };
+			document_state* const state					 = doc;
+			internal::read_structural_index_ptr position = open + 1;
 			if (position < state->tapeEnd && state->template charAt<internal::uint_c_v<']'>>(position)) {
 				state->cursor = position + 1;
 				state->depth  = depth - 1;
 				return iterator{};
 			}
 			state->cursor = position;
-			state->depth  = depth;
+			state->depth  = depth + 1;
 			if (position >= state->tapeEnd) [[unlikely]] {
+				state->depth = depth;
 				return iterator{};
 			}
 			return iterator{ state, position, depth };
 		}
 
-		template<internal::float_types float_type> [[nodiscard]] JSONIFIER_INLINE parse_statuses getFloats(std::vector<float_type>& out) const noexcept {
-			if (error_code != parse_statuses::success) [[unlikely]] {
+		template<internal::float_types float_type> [[nodiscard]] JSONIFIER_INLINE error_codes getFloats(std::vector<float_type>& out) const noexcept {
+			if (error_code != error_codes::success) [[unlikely]] {
 				return error_code;
 			}
 			out.clear();
-			document_state* const state = doc;
-			internal::read_structural_index_ptr position{ open + 1 };
+			document_state* const state					 = doc;
+			internal::read_structural_index_ptr position = open + 1;
 			if (position >= state->tapeEnd) [[unlikely]] {
 				state->cursor = state->tapeEnd;
-				return parse_statuses::missing_array_end;
+				return error_codes::unclosed_container;
 			}
 			state->depth = depth;
 			if (state->template charAt<internal::uint_c_v<']'>>(position)) {
 				state->cursor = position + 1;
 				state->depth  = depth - 1;
-				return parse_statuses::success;
+				return error_codes::success;
 			}
 			static constexpr uint64_t shortFractionSliceLimit{ 10 };
-			const uint64_t firstSliceLength{ position + 1 < state->tapeEnd ? static_cast<uint64_t>(*(position + 1) - *position) : shortFractionSliceLimit + 1 };
+			const uint64_t firstSliceLength = position + 1 < state->tapeEnd ? static_cast<uint64_t>(*(position + 1) - *position) : shortFractionSliceLimit + 1;
 			if (firstSliceLength <= shortFractionSliceLimit) {
 				return internal::float_array_shaped_loop<internal::number_shapes::short_fraction, float_type>::impl(state, position, depth, out);
 			}
 			return internal::float_array_shaped_loop<internal::number_shapes::general, float_type>::impl(state, position, depth, out);
 		}
 
-		[[nodiscard]] JSONIFIER_INLINE parse_statuses rawJson(string_view& out) const noexcept {
-			return value{ doc, open, depth - 1 }.rawJson(out);
+		[[nodiscard]] JSONIFIER_INLINE error_codes rawJson(string_view& out) const noexcept {
+			return value{ doc, open, depth }.rawJson(out);
 		}
 
 		JSONIFIER_INLINE value atPointer(string_view pointer) const noexcept {
-			return value{ doc, open, depth - 1 }.atPointer(pointer);
+			return value{ doc, open, depth }.atPointer(pointer);
 		}
 
 		JSONIFIER_INLINE value operator[](uint64_t index) const noexcept {
@@ -189,18 +193,18 @@ namespace jsonifier::generic {
 		}
 
 		JSONIFIER_INLINE value at(uint64_t index) const noexcept {
-			if (error_code != parse_statuses::success) [[unlikely]] {
+			if (error_code != error_codes::success) [[unlikely]] {
 				return value{ error_code };
 			}
-			for (auto iter{ begin() }; iter != end(); ++iter) {
+			for (auto iter = begin(); iter != end(); ++iter) {
 				if (index-- == 0) {
 					return *iter;
 				}
 			}
-			return value{ parse_statuses::index_out_of_bounds };
+			return value{ error_codes::index_out_of_bounds };
 		}
 
-		JSONIFIER_INLINE parse_statuses error() const noexcept {
+		JSONIFIER_INLINE error_codes error() const noexcept {
 			return error_code;
 		}
 
@@ -212,7 +216,7 @@ namespace jsonifier::generic {
 		internal::read_structural_index_ptr open{};
 		document_state* doc{};
 		uint64_t depth{};
-		parse_statuses error_code{ parse_statuses::success };
+		error_codes error_code{ error_codes::success };
 	};
 
 }

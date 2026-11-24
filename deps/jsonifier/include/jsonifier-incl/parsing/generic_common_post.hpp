@@ -15,7 +15,6 @@ namespace jsonifier::internal {
 
 		JSONIFIER_INLINE generic_storage& operator=(generic_storage&& other) noexcept {
 			if (this != &other) [[likely]] {
-				fieldIndex	= internal::move(other.fieldIndex);
 				arena		= internal::move(other.arena);
 				state		= document_state{};
 				other.state = document_state{};
@@ -23,7 +22,7 @@ namespace jsonifier::internal {
 			return *this;
 		}
 
-		JSONIFIER_INLINE generic_storage(generic_storage&& other) noexcept : fieldIndex{ internal::move(other.fieldIndex) }, arena{ internal::move(other.arena) } {
+		JSONIFIER_INLINE generic_storage(generic_storage&& other) noexcept : arena{ internal::move(other.arena) } {
 			other.state = document_state{};
 		}
 
@@ -34,7 +33,6 @@ namespace jsonifier::internal {
 			return state;
 		}
 
-		field_index_map fieldIndex{};
 		document_state state{};
 		string_arena arena{};
 	};
@@ -44,32 +42,27 @@ namespace jsonifier::internal {
 namespace jsonifier::generic {
 
 	template<bool minified> JSONIFIER_INLINE generic_object<minified> generic_value<minified>::getObject() const noexcept {
-		if (error_code != parse_statuses::success) [[unlikely]] {
+		if (error_code != error_codes::success) [[unlikely]] {
 			return object{ error_code };
 		}
 		if (!doc->template charAt<internal::uint_c_v<'{'>>(iter)) [[unlikely]] {
-			return object{ parse_statuses::incorrect_type };
+			return object{ error_codes::incorrect_type };
 		}
 		doc->cursor = iter + 1;
-		doc->depth	= depth + 1;
-		return object{ doc, iter, depth + 1 };
+		doc->depth	= depth;
+		return object{ doc, iter, depth };
 	}
 
 	template<bool minified> JSONIFIER_INLINE generic_array<minified> generic_value<minified>::getArray() const noexcept {
-		if (error_code != parse_statuses::success) [[unlikely]] {
+		if (error_code != error_codes::success) [[unlikely]] {
 			return array{ error_code };
 		}
 		if (!doc->template charAt<internal::uint_c_v<'['>>(iter)) [[unlikely]] {
-			return array{ parse_statuses::incorrect_type };
+			return array{ error_codes::incorrect_type };
 		}
 		doc->cursor = iter + 1;
-		doc->depth	= depth + 1;
-		return array{ doc, iter, depth + 1 };
-	}
-
-	template<bool minified> template<internal::string_view_convertible_types key_type>
-	JSONIFIER_INLINE generic_value<minified> generic_value<minified>::operator[](key_type&& key) const noexcept {
-		return getObject().findFieldUnordered(static_cast<string_view>(key));
+		doc->depth	= depth;
+		return array{ doc, iter, depth };
 	}
 
 	template<bool minified> JSONIFIER_INLINE generic_value<minified> generic_value<minified>::operator[](uint64_t index) const noexcept {
@@ -81,7 +74,7 @@ namespace jsonifier::generic {
 			return true;
 		}
 		unescapedToken.clear();
-		for (uint64_t x{ 0 }; x < token.size(); ++x) {
+		for (uint64_t x = 0; x < token.size(); ++x) {
 			if (token[x] != '~') {
 				unescapedToken.emplace_back(token[x]);
 			} else if (x + 1 < token.size() && (token[x + 1] == '0' || token[x + 1] == '1')) {
@@ -95,29 +88,25 @@ namespace jsonifier::generic {
 		return true;
 	}
 
-	template<bool minified> JSONIFIER_INLINE generic_value<minified> generic_value<minified>::findFieldUnordered(string_view key) const noexcept {
-		return getObject().findFieldUnordered(key);
-	}
-
-	template<bool minified> JSONIFIER_INLINE parse_statuses generic_value<minified>::parsePointerIndex(string_view token, uint64_t& index) noexcept {
+	template<bool minified> JSONIFIER_INLINE error_codes generic_value<minified>::parsePointerIndex(string_view token, uint64_t& index) noexcept {
 		if (token.empty() || (token.size() > 1 && token[0] == '0')) [[unlikely]] {
-			return parse_statuses::invalid_json_pointer;
+			return error_codes::invalid_json_pointer;
 		}
 		index = 0;
 		for (const char digit: token) {
 			if (digit < '0' || digit > '9') [[unlikely]] {
-				return parse_statuses::invalid_json_pointer;
+				return error_codes::invalid_json_pointer;
 			}
-			const uint64_t digitValue{ static_cast<uint64_t>(digit - '0') };
+			const uint64_t digitValue = static_cast<uint64_t>(digit - '0');
 			if (index > (std::numeric_limits<uint64_t>::max() - digitValue) / 10) [[unlikely]] {
-				return parse_statuses::index_out_of_bounds;
+				return error_codes::index_out_of_bounds;
 			}
 			index = index * 10 + digitValue;
 		}
-		return parse_statuses::success;
+		return error_codes::success;
 	}
 
-	template<bool minified> template<typename value_type> JSONIFIER_INLINE parse_statuses generic_value<minified>::get(value_type& out) const {
+	template<bool minified> template<typename value_type> JSONIFIER_INLINE error_codes generic_value<minified>::get(value_type& out) const {
 		if constexpr (std::is_same_v<value_type, double>) {
 			return getDouble(out);
 		} else if constexpr (std::is_same_v<value_type, int64_t>) {
@@ -126,7 +115,7 @@ namespace jsonifier::generic {
 			return getUint64(out);
 		} else if constexpr (std::is_same_v<value_type, bool>) {
 			return getBool(out);
-		} else if constexpr (internal::string_view_types<value_type>) {
+		} else if constexpr (std::is_same_v<value_type, std::string_view> || internal::buffer_like_types<value_type>) {
 			return getString(out);
 		} else if constexpr (std::is_same_v<value_type, object>) {
 			out = getObject();
@@ -141,27 +130,27 @@ namespace jsonifier::generic {
 		}
 	}
 
-	template<bool minified> template<typename element_type> JSONIFIER_INLINE parse_statuses generic_value<minified>::getArray(std::vector<element_type>& out) const {
-		const array arrayView{ getArray() };
+	template<bool minified> template<typename element_type> JSONIFIER_INLINE error_codes generic_value<minified>::getArray(std::vector<element_type>& out) const {
+		const array arrayView = getArray();
 		if constexpr (internal::float_types<element_type>) {
 			return arrayView.getFloats(out);
 		} else {
-			if (arrayView.error() != parse_statuses::success) [[unlikely]] {
+			if (arrayView.error() != error_codes::success) [[unlikely]] {
 				return arrayView.error();
 			}
 			out.clear();
 			for (auto element: arrayView) {
 				if constexpr (internal::vector_types<element_type>) {
-					if (const parse_statuses element_error_code = element.getArray(out.emplace_back()); element_error_code != parse_statuses::success) [[unlikely]] {
+					if (const error_codes element_error_code = element.getArray(out.emplace_back()); element_error_code != error_codes::success) [[unlikely]] {
 						return element_error_code;
 					}
 				} else {
-					if (const parse_statuses element_error_code = element.get(out.emplace_back()); element_error_code != parse_statuses::success) [[unlikely]] {
+					if (const error_codes element_error_code = element.get(out.emplace_back()); element_error_code != error_codes::success) [[unlikely]] {
 						return element_error_code;
 					}
 				}
 			}
-			return parse_statuses::success;
+			return error_codes::success;
 		}
 	}
 
@@ -172,15 +161,15 @@ namespace jsonifier::generic {
 	template<bool minified> JSONIFIER_INLINE generic_value<minified> generic_value<minified>::pointerStep(string_view token, string& unescapedToken) const noexcept {
 		switch (doc->charAt(iter)) {
 			case internal::uint_c_v<'{'>: {
-				return unescapePointerToken(token, unescapedToken) ? findField(token) : value{ parse_statuses::invalid_json_pointer };
+				return unescapePointerToken(token, unescapedToken) ? findField(token) : value{ error_codes::invalid_json_pointer };
 			}
 			case internal::uint_c_v<'['>: {
 				uint64_t index{};
-				const parse_statuses index_error_code{ parsePointerIndex(token, index) };
-				return index_error_code == parse_statuses::success ? getArray().at(index) : value{ index_error_code };
+				const error_codes index_error_code = parsePointerIndex(token, index);
+				return index_error_code == error_codes::success ? getArray().at(index) : value{ index_error_code };
 			}
 			default: {
-				return value{ parse_statuses::invalid_json_pointer };
+				return value{ error_codes::invalid_json_pointer };
 			}
 		}
 	}
@@ -188,17 +177,17 @@ namespace jsonifier::generic {
 	template<bool minified> JSONIFIER_INLINE generic_value<minified> generic_value<minified>::atPointer(string_view pointer) const noexcept {
 		value current{ *this };
 		string unescapedToken{};
-		const char* position{ pointer.data() };
-		const char* pointerEnd{ position + pointer.size() };
-		while (current.error_code == parse_statuses::success && position < pointerEnd) {
+		const char* position   = pointer.data();
+		const char* pointerEnd = position + pointer.size();
+		while (current.error_code == error_codes::success && position < pointerEnd) {
 			if (*position != '/') [[unlikely]] {
-				current = value{ parse_statuses::invalid_json_pointer };
+				current = value{ error_codes::invalid_json_pointer };
 			} else {
 				++position;
-				const char* slash = internal::char_comparison<'/', char>::memchar(position, static_cast<uint64_t>(pointerEnd - position));
-				const char* tokenEnd{ slash ? slash : pointerEnd };
-				current	 = current.pointerStep(string_view{ position, static_cast<uint64_t>(tokenEnd - position) }, unescapedToken);
-				position = tokenEnd;
+				const char* slash	 = internal::char_comparison<'/', char>::memchar(position, static_cast<uint64_t>(pointerEnd - position));
+				const char* tokenEnd = slash ? slash : pointerEnd;
+				current				 = current.pointerStep(string_view{ position, static_cast<uint64_t>(tokenEnd - position) }, unescapedToken);
+				position			 = tokenEnd;
 			}
 		}
 		return current;

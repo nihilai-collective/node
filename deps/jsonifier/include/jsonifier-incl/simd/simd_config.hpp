@@ -16,21 +16,46 @@ namespace jsonifier::internal {
 	using write_structural_index_ptr = uint32_t* __restrict;
 	using write_buffer_ptr			 = uint8_t* __restrict;
 
-#if JSONIFIER_AVX512
+#if JSONIFIER_AVX512 && JSONIFIER_COMPILER_GCC
+	inline constexpr uint64_t smallDocumentBytes{ 0 };
+	inline constexpr uint64_t simdBlocksPerStep{ 4 };
+#elif JSONIFIER_AVX512 && JSONIFIER_COMPILER_MSVC
+	inline constexpr uint64_t smallDocumentBytes{ 512 };
 	inline constexpr uint64_t simdBlocksPerStep{ 8 };
-#elif JSONIFIER_AVX2
+#elif JSONIFIER_AVX512 && JSONIFIER_COMPILER_CLANG && JSONIFIER_PLATFORM_WINDOWS
+	inline constexpr uint64_t smallDocumentBytes{ 4096 };
+	inline constexpr uint64_t simdBlocksPerStep{ 1 };
+#elif JSONIFIER_AVX512 && JSONIFIER_COMPILER_CLANG
+	inline constexpr uint64_t smallDocumentBytes{ 256 };
+	inline constexpr uint64_t simdBlocksPerStep{ 4 };
+#elif JSONIFIER_NEON && JSONIFIER_COMPILER_GCC
+	inline constexpr uint64_t smallDocumentBytes{ 256 };
+	inline constexpr uint64_t simdBlocksPerStep{ 4 };
 	inline constexpr uint64_t simdTapeStep{ 4 };
-	#if JSONIFIER_COMPILER_CLANG
+#elif JSONIFIER_NEON && JSONIFIER_COMPILER_CLANG
+	inline constexpr uint64_t smallDocumentBytes{ 2048 };
+	inline constexpr uint64_t simdBlocksPerStep{ 2 };
+	inline constexpr uint64_t simdTapeStep{ 2 };
+#elif JSONIFIER_AVX2 && JSONIFIER_COMPILER_GCC
+	inline constexpr uint64_t smallDocumentBytes{ 256 };
 	inline constexpr uint64_t simdBlocksPerStep{ 4 };
-	#else
-	inline constexpr uint64_t simdBlocksPerStep{ 8 };
-	#endif
-#elif JSONIFIER_NEON
-	inline constexpr uint64_t simdTapeStep{ 8 };
+	inline constexpr uint64_t simdTapeStep{ 4 };
+#elif JSONIFIER_AVX2 && JSONIFIER_COMPILER_MSVC
+	inline constexpr uint64_t smallDocumentBytes{ 128 };
+	inline constexpr uint64_t simdBlocksPerStep{ 2 };
+	inline constexpr uint64_t simdTapeStep{ 2 };
+#elif JSONIFIER_AVX2 && JSONIFIER_COMPILER_CLANG && JSONIFIER_PLATFORM_WINDOWS
+	inline constexpr uint64_t smallDocumentBytes{ 256 };
 	inline constexpr uint64_t simdBlocksPerStep{ 4 };
+	inline constexpr uint64_t simdTapeStep{ 2 };
+#elif JSONIFIER_AVX2 && JSONIFIER_COMPILER_CLANG
+	inline constexpr uint64_t smallDocumentBytes{ 4096 };
+	inline constexpr uint64_t simdBlocksPerStep{ 4 };
+	inline constexpr uint64_t simdTapeStep{ 2 };
 #else
-	inline constexpr uint64_t simdTapeStep{ 8 };
-	inline constexpr uint64_t simdBlocksPerStep{ 8 };
+	inline constexpr uint64_t smallDocumentBytes{ 256 };
+	inline constexpr uint64_t simdBlocksPerStep{ 4 };
+	inline constexpr uint64_t simdTapeStep{ 2 };
 #endif
 
 #if JSONIFIER_ANY_AVX

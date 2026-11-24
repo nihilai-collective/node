@@ -24,17 +24,22 @@ on:
         description: 'Jsonifier candidate commit (empty: tip of candidate_ref)'
         required: false
         default: ''
+      base_ref:
+        description: 'simdjson baseline branch, used when base_sha is empty'
+        required: false
+        default: 'bench-baseline-simdjson-master'
       candidate_ref:
         description: 'Jsonifier candidate branch, used when candidate_sha is empty'
         required: false
-        default: 'add-jsonifier-main'
+        default: 'bench-candidate-node-new'
   push:
     branches:
       - benchmarks
 
 env:
   RESULT_BRANCH_PREFIX: benchmarks-results
-  CANDIDATE_REF: ${{ inputs.candidate_ref || 'add-jsonifier-main' }}
+  CANDIDATE_REF: ${{ inputs.candidate_ref || 'bench-candidate-node-new' }}
+  BASE_REF: ${{ inputs.base_ref || 'bench-baseline-simdjson-master' }}
   ONLY_LEGS: ''
   RUNS: '30'
 

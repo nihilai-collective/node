@@ -19,6 +19,10 @@ if has_simdjson "$CANDIDATE_SHA"; then
   echo "Candidate $CANDIDATE_SHA still has deps/simdjson, so it is not the Jsonifier replacement." >&2
   exit 1
 fi
+if [ -z "$BASE_SHA" ] && [ -n "$BASE_REF" ]; then
+  BASE_SHA=$(git ls-remote origin "refs/heads/$BASE_REF" | awk '{print $1}')
+  [ -n "$BASE_SHA" ] || { echo "Could not resolve branch $BASE_REF." >&2; exit 1; }
+fi
 if [ -z "$BASE_SHA" ]; then
   if git rev-parse -q --verify "$CANDIDATE_SHA^2" >/dev/null && has_simdjson "$CANDIDATE_SHA^2"; then
     BASE_SHA=$(git rev-parse "$CANDIDATE_SHA^2")

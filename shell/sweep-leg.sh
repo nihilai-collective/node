@@ -15,7 +15,11 @@ PODS=${SWEEP_PODS:-0 256 1024 4096 65536}
 BLOCKS=${SWEEP_BLOCKS:-1 4 8}
 ISA=${SWEEP_ISA:-AVX512}
 CONFIG=deps/jsonifier/include/jsonifier-incl/simd/simd_config.hpp
-PY=$(command -v python3 || command -v python)
+PY=
+for candidate in python3 python; do
+  if "$candidate" -c "" >/dev/null 2>&1; then PY=$candidate; break; fi
+done
+[ -n "$PY" ] || { echo "sweep-leg: no working python" >&2; exit 1; }
 
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) WINDOWS=1; EXE=node.exe ;;

@@ -3,14 +3,15 @@ import sys
 
 
 def main():
-    source, target, pod, blocks = sys.argv[1:5]
+    source, target, isa, pod, blocks = sys.argv[1:6]
+    marker = f"JSONIFIER_{isa}"
     lines = open(source, encoding="utf-8").read().split("\n")
     inside = False
     changed = 0
     for index, line in enumerate(lines):
         stripped = line.strip()
         if stripped.startswith(("#if", "#elif", "#else", "#endif")):
-            inside = stripped.startswith(("#if", "#elif")) and "JSONIFIER_AVX512" in stripped
+            inside = stripped.startswith(("#if", "#elif")) and stripped.split()[1] == marker
             continue
         if inside:
             updated = re.sub(r"(smallDocumentBytes\{ )\d+", r"\g<1>" + pod, line)
@@ -18,7 +19,7 @@ def main():
             changed += updated != line
             lines[index] = updated
     if changed == 0:
-        raise SystemExit(f"set-avx512-config: no AVX-512 smallDocumentBytes or simdBlocksPerStep lines in {source}")
+        raise SystemExit(f"set-simd-config: no {marker} smallDocumentBytes or simdBlocksPerStep lines in {source}")
     open(target, "w", encoding="utf-8", newline="").write("\n".join(lines))
 
 

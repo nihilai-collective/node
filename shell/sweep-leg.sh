@@ -13,6 +13,7 @@ SLUG=${SLUG:-local}
 RUNS=${SWEEP_RUNS:-15}
 PODS=${SWEEP_PODS:-0 256 1024 4096 65536}
 BLOCKS=${SWEEP_BLOCKS:-1 4 8}
+ISA=${SWEEP_ISA:-AVX512}
 CONFIG=deps/jsonifier/include/jsonifier-incl/simd/simd_config.hpp
 PY=$(command -v python3 || command -v python)
 
@@ -30,7 +31,7 @@ ROWS="$BINS/sweep-rows.tsv"
 for pod in $PODS; do
   for blocks in $BLOCKS; do
     tag="p${pod}-b${blocks}"
-    "$PY" "$HARNESS/shell/set-avx512-config.py" "$ORIGINAL" "$NODE_DIR/$CONFIG" "$pod" "$blocks" || exit 1
+    "$PY" "$HARNESS/shell/set-simd-config.py" "$ORIGINAL" "$NODE_DIR/$CONFIG" "$ISA" "$pod" "$blocks" || exit 1
     log="$BINS/build-sweep-$tag.log"
     echo "$tag: rebuilding (log: $log)"
     rm -f "$NODE_DIR/out/Release/$EXE"
@@ -48,7 +49,7 @@ for pod in $PODS; do
     mkdir -p "$BINS/sweep-$tag"
     cp "$NODE_DIR/out/Release/$EXE" "$BINS/sweep-$tag/$EXE"
     out="$RESULTS_DIR/${SLUG}-sweep-$tag.txt"
-    (cd "$HARNESS/benchmark" && "$BINS/sweep-$tag/$EXE" compare.js --old "$BINS/old/$EXE" --new "$BINS/sweep-$tag/$EXE" \
+    (cd "$HARNESS/benchmark" && ${SWEEP_BENCH_PREFIX} "$BINS/sweep-$tag/$EXE" compare.js --old "$BINS/old/$EXE" --new "$BINS/sweep-$tag/$EXE" \
       --runs "$RUNS" --no-progress --filter package-json-corpus --csv "${out%.txt}.csv" --analyze module) > "$out" 2>&1
     line=$(grep -E '^module.*%' "$out" | grep -v '[░█▓]' | head -n 1)
     improvement=$(echo "$line" | grep -oE '[-+][0-9.]+ %' | head -n 1 | tr -d ' ')
@@ -60,9 +61,9 @@ done
 
 cp "$ORIGINAL" "$NODE_DIR/$CONFIG"
 {
-  echo "# AVX-512 config sweep: ${LEG_NAME:-$SLUG}"
+  echo "# $ISA config sweep: ${LEG_NAME:-$SLUG}"
   echo
-  echo "Jsonifier vs simdjson (padding reserved) on the whole package.json corpus, ${RUNS} runs per config, each config built incrementally from the candidate with only the AVX-512 blocks of simd_config.hpp changed."
+  echo "Jsonifier vs simdjson (padding reserved) on the whole package.json corpus, ${RUNS} runs per config, each config built incrementally from the candidate with only the $ISA blocks of simd_config.hpp changed."
   echo
   echo "| smallDocumentBytes | simdBlocksPerStep | Jsonifier vs simdjson | confidence |"
   echo "| --- | --- | --- | --- |"

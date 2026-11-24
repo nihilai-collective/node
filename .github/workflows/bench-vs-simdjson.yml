@@ -231,6 +231,7 @@ jobs:
             echo "COMPILER_VERSION=$("$CXX_BIN" --version | head -n 1)" >> "$GITHUB_ENV"
           else
             echo "COMPILER_VERSION=clang-cl (vcbuild.bat)" >> "$GITHUB_ENV"
+            export LINK="synchronization.lib ${LINK:-}"
           fi
           bash harness/shell/build.sh node bins "$BASE_SHA" "$CANDIDATE_SHA"
 

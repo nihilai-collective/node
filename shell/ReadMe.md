@@ -22,7 +22,7 @@ By default the candidate is the tip of `add-jsonifier-main`, the PR branch with 
 | macOS Clang NEON | macos-latest, Homebrew llvm | rejects M1 |
 | macOS GCC NEON | macos-latest, Homebrew gcc | rejects M1 |
 
-Node 24 and later only build with ClangCL on Windows (`vcbuild.bat` enforces it), so the Windows leg is ClangCL rather than MSVC. For a parser-only MSVC number, use `buddy-tools/jsonifier/node/msvc_harness`.
+Node 24 and later only build with ClangCL on Windows (`vcbuild.bat` enforces it), so the Windows leg is ClangCL rather than MSVC. The Windows build exports `LINK=synchronization.lib` for both binaries: on the current runner image, V8's `mksnapshot` at the baseline commit fails to link `WaitOnAddress`, `WakeByAddressSingle` and `WakeByAddressAll` without it, and `lld-link` reads `LINK` like MSVC's linker does. For a parser-only MSVC number, use `buddy-tools/jsonifier/node/msvc_harness`.
 
 Unix legs configure both binaries with `--without-lief`: upstream's bundled LIEF (only used for single executable applications) fails to compile with Homebrew Clang 23, and package.json parsing never touches it.
 

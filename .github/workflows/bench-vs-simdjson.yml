@@ -41,7 +41,9 @@ env:
   CANDIDATE_REF: ${{ inputs.candidate_ref || 'bench-candidate-node-new' }}
   BASE_REF: ${{ inputs.base_ref || 'bench-baseline-simdjson-master' }}
   ONLY_LEGS: 'Linux GCC AVX-512|Linux Clang AVX-512|Windows ClangCL AVX-512'
-  RUN_SWEEP: 'false'
+  RUN_SWEEP: 'true'
+  SWEEP_PODS: '0 128 256 512 2048'
+  SWEEP_BLOCKS: '1 2 4'
   RUNS: '30'
 
 jobs:

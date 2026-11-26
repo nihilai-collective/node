@@ -1,0 +1,37 @@
+Leg: macOS GCC NEON
+CPU: Apple M2 Pro (Virtual)
+Compiler: g++-16 (Homebrew GCC 16.2.0) 16.2.0
+Baseline (simdjson, padding reserved): c8121fcd181150c17b4ed06ba0d7e3d0d809be50+old
+Candidate (Jsonifier): 0455cd0ce9a4563a9af21e94355cd5f2d542b320
+Corpus: /Users/runner/work/node/node/node/deps
+Jsonifier ISA cap: none (best supported tier)
+Runs: 30
+Attempt: 4
+
+######## Binaries
+old: v28.0.0-pre, simdjson 5.3.0
+new: v28.0.0-pre, jsonifier 1.0.2
+
+######## compare.js: old = simdjson with padding reserved, new = Jsonifier (Welch's t-test)
+                                         confidence   improvement   accuracy (*)    (**)   (***)
+module/package-json-corpus.js n=2000000                  +6.69 %   ±6.78%  ±9.03%  ±11.76%
+
+                                            -13.5%             0%             +13.5%
+module/package-json-corpus.js n=2000000                      |▓▓▓▓▓▓▓▓▓░░░░░░░░░░  +6.69% 
+
+Rates were scaled by 1000x into HdrHistogram (3 significant figures).
+Use --scale to adjust precision if needed.
+
+Be aware that when doing many comparisons the risk of a false-positive
+result increases. In this case, there are 1 comparisons, you can thus
+expect the following amount of false-positive results:
+  0.05 false positives, when considering a   5% risk acceptance (*, **, ***),
+  0.01 false positives, when considering a   1% risk acceptance (**, ***),
+  0.00 false positives, when considering a 0.1% risk acceptance (***)
+
+The stars above are per-benchmark and uncorrected. Adjusting for the size of
+this comparison set (Holm-Bonferroni), 0 comparisons remain significant at 5%.
+--max-regression uses the corrected values.
+
+######## Verdict
+PASS 🦎

@@ -260,6 +260,9 @@ jobs:
           if [ "$RUNNER_OS" = "Windows" ]; then
             cp node/out/Release/node.pdb traces/new-node.pdb
             cp bins/new/node.exe traces/new-node.exe
+          else
+            cp bins/new/node traces/new-node
+            cp bins/old/node traces/old-node
           fi
 
       - name: Upload profiles

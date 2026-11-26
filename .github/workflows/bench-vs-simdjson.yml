@@ -258,8 +258,10 @@ jobs:
         run: |
           bash harness/shell/profile-leg.sh harness bins results node/deps traces
           if [ "$RUNNER_OS" = "Windows" ]; then
-            cp node/out/Release/node.pdb traces/new-node.pdb
+            cp bins/new/node.pdb traces/new-node.pdb
             cp bins/new/node.exe traces/new-node.exe
+            cp bins/old/node.pdb traces/old-node.pdb
+            cp bins/old/node.exe traces/old-node.exe
           else
             cp bins/new/node traces/new-node
             cp bins/old/node traces/old-node

@@ -53,6 +53,7 @@ build_one() {
   fi
   mkdir -p "$BINS/$label"
   cp "$NODE_DIR/out/Release/$EXE" "$BINS/$label/$EXE"
+  [ "$WINDOWS" = "1" ] && [ -f "$NODE_DIR/out/Release/node.pdb" ] && cp "$NODE_DIR/out/Release/node.pdb" "$BINS/$label/node.pdb"
   echo "$key" > "$BINS/$label/sha.txt"
   echo "$label: built 🦎"
 }

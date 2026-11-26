@@ -36,6 +36,12 @@ namespace jsonifier::internal {
 	inline constexpr bool packageJsonSlotDispatch{ false };
 #endif
 
+#if JSONIFIER_COMPILER_CLANG
+	inline constexpr bool packageJsonUnaliasedFields{ true };
+#else
+	inline constexpr bool packageJsonUnaliasedFields{ false };
+#endif
+
 	struct package_json_slot_table {
 		uint64_t tags[8]{};
 	};
@@ -103,6 +109,17 @@ namespace jsonifier::internal {
 		static constexpr uint64_t scriptsKey{ packageJsonSlotDispatch ? packageJsonSlotOf(scriptsTag, packageJsonTagMultiplier) : scriptsTag };
 
 		JSONIFIER_INLINE static error_codes impl(document_state& state, generic::package_json_fields& out) noexcept {
+			if constexpr (!packageJsonUnaliasedFields) {
+				return walk(state, out);
+			}
+			generic::package_json_fields unaliasedFields{};
+			const error_codes error_code = walk(state, unaliasedFields);
+			out							 = unaliasedFields;
+			return error_code;
+		}
+
+	  protected:
+		JSONIFIER_INLINE static error_codes walk(document_state& state, generic::package_json_fields& out) noexcept {
 			const read_structural_index_ptr tapeEnd = state.tapeEnd;
 			read_structural_index_ptr position		= state.tape;
 			if (!state.charAt<uint_c_v<'{'>>(position)) [[unlikely]] {
@@ -145,8 +162,7 @@ namespace jsonifier::internal {
 			}
 		}
 
-	  protected:
-#if JSONIFIER_COMPILER_CLANG && JSONIFIER_NEON && !defined(_MSC_VER)
+#if (JSONIFIER_COMPILER_CLANG && JSONIFIER_NEON && !defined(_MSC_VER)) || JSONIFIER_COMPILER_GCC
 		JSONIFIER_NOINLINE
 #else
 		JSONIFIER_INLINE

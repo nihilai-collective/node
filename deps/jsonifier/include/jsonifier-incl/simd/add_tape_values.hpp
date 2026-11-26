@@ -15,7 +15,7 @@ namespace jsonifier::internal {
 
 	template<typename integer_sequence_type> struct add_tape_values;
 
-#if JSONIFIER_AVX512
+#if 0
 
 	// Sampled from Dr. Lemire's library, simdjson: https://github.com/simdjson/simdjson
 	template<uint64_t... indices> struct add_tape_values<integer_sequence<indices...>> {

@@ -19,15 +19,19 @@ namespace jsonifier::internal {
 #if JSONIFIER_AVX512 && JSONIFIER_COMPILER_GCC
 	inline constexpr uint64_t smallDocumentBytes{ 256 };
 	inline constexpr uint64_t simdBlocksPerStep{ 1 };
+	inline constexpr uint64_t simdTapeStep{ 4 };
 #elif JSONIFIER_AVX512 && JSONIFIER_COMPILER_MSVC
 	inline constexpr uint64_t smallDocumentBytes{ 512 };
 	inline constexpr uint64_t simdBlocksPerStep{ 8 };
+	inline constexpr uint64_t simdTapeStep{ 4 };
 #elif JSONIFIER_AVX512 && JSONIFIER_COMPILER_CLANG && JSONIFIER_PLATFORM_WINDOWS
 	inline constexpr uint64_t smallDocumentBytes{ 0 };
 	inline constexpr uint64_t simdBlocksPerStep{ 1 };
+	inline constexpr uint64_t simdTapeStep{ 4 };
 #elif JSONIFIER_AVX512 && JSONIFIER_COMPILER_CLANG
 	inline constexpr uint64_t smallDocumentBytes{ 0 };
 	inline constexpr uint64_t simdBlocksPerStep{ 4 };
+	inline constexpr uint64_t simdTapeStep{ 4 };
 #elif JSONIFIER_NEON && JSONIFIER_COMPILER_GCC
 	inline constexpr uint64_t smallDocumentBytes{ 256 };
 	inline constexpr uint64_t simdBlocksPerStep{ 4 };

@@ -8,30 +8,28 @@
 namespace node {
 namespace modules {
 
-struct PackageJSONFields;
-
 inline constexpr std::string_view kJsonifierUtf8Bom = "\xEF\xBB\xBF";
 
-class PackageJSONFieldSink {
- public:
-  explicit PackageJSONFieldSink(PackageJSONFields* fields) : fields_(fields) {}
-
-  void SetName(std::string_view value);
-  void SetMain(std::string_view value);
-  void SetType(std::string_view value);
-  void SetExports(std::string_view value);
-  void SetImports(std::string_view value);
-  void SetScripts(std::string_view value);
-  void SetPrivate(bool value);
-
- private:
-  PackageJSONFields* fields_;
+struct PackageJSONSpans {
+  std::string_view name;
+  std::string_view main;
+  std::string_view type;
+  std::string_view exports;
+  std::string_view imports;
+  std::string_view scripts;
+  bool has_name = false;
+  bool has_main = false;
+  bool has_exports = false;
+  bool has_imports = false;
+  bool has_scripts = false;
+  bool has_private = false;
+  bool is_private = false;
 };
 
 class PackageJSONBackendParser {
  public:
   virtual ~PackageJSONBackendParser();
-  virtual bool Parse(std::string_view json, PackageJSONFieldSink* sink) = 0;
+  virtual bool Parse(std::string_view json, PackageJSONSpans* spans) = 0;
 };
 
 namespace isa_avx512 {

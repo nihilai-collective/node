@@ -195,34 +195,6 @@ std::string_view WalkJsonForIsa(std::string_view json,
 
 PackageJSONBackendParser::~PackageJSONBackendParser() = default;
 
-void PackageJSONFieldSink::SetName(std::string_view value) {
-  fields_->name.emplace(value);
-}
-
-void PackageJSONFieldSink::SetMain(std::string_view value) {
-  fields_->main.emplace(value);
-}
-
-void PackageJSONFieldSink::SetType(std::string_view value) {
-  fields_->type.assign(value);
-}
-
-void PackageJSONFieldSink::SetExports(std::string_view value) {
-  fields_->exports.emplace(value);
-}
-
-void PackageJSONFieldSink::SetImports(std::string_view value) {
-  fields_->imports.emplace(value);
-}
-
-void PackageJSONFieldSink::SetScripts(std::string_view value) {
-  fields_->scripts.emplace(value);
-}
-
-void PackageJSONFieldSink::SetPrivate(bool value) {
-  fields_->is_private = value;
-}
-
 struct JsonifierPackageJSONParser::Impl {
   std::unique_ptr<PackageJSONBackendParser> backend{NewGenericParser()};
 };
@@ -237,8 +209,32 @@ bool JsonifierPackageJSONParser::Parse(std::string_view json,
   if (!EndsWithObjectClose(json)) {
     return false;
   }
-  PackageJSONFieldSink sink{fields};
-  return impl_->backend->Parse(json, &sink);
+  PackageJSONSpans spans;
+  if (!impl_->backend->Parse(json, &spans)) {
+    return false;
+  }
+  if (spans.has_name) {
+    fields->name.emplace(spans.name);
+  }
+  if (spans.has_main) {
+    fields->main.emplace(spans.main);
+  }
+  if (!spans.type.empty()) {
+    fields->type.assign(spans.type);
+  }
+  if (spans.has_exports) {
+    fields->exports.emplace(spans.exports);
+  }
+  if (spans.has_imports) {
+    fields->imports.emplace(spans.imports);
+  }
+  if (spans.has_scripts) {
+    fields->scripts.emplace(spans.scripts);
+  }
+  if (spans.has_private) {
+    fields->is_private = spans.is_private;
+  }
+  return true;
 }
 
 }  // namespace modules

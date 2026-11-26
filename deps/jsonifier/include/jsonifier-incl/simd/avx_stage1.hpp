@@ -130,7 +130,7 @@ namespace jsonifier::internal::simd {
 			const uint64_t quotes  = (cmp_eq_op::impl(in01, quoteRegister) & ~escaped);
 			rope_block::escaped	   = escaped;
 			rope_block::quotes	   = quotes;
-#if JSONIFIER_COMPILER_GCC
+#if JSONIFIER_COMPILER_GCC && !JSONIFIER_AVX512
 			return quotes ? finishNext() : finishNextNoInString();
 #else
 			return finishNext();
@@ -293,7 +293,7 @@ namespace jsonifier::internal::simd {
 		const uint64_t quotes  = (pod_cmp_eq_op<registerBytes, registerCount>::impl(in01, quoteRegister) & ~escaped);
 		rope_block::escaped	   = escaped;
 		rope_block::quotes	   = quotes;
-#if JSONIFIER_COMPILER_GCC
+#if JSONIFIER_COMPILER_GCC && !JSONIFIER_AVX512
 		return quotes ? finishNext() : finishNextNoInString();
 #else
 		return finishNext();
